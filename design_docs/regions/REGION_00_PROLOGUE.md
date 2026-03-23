@@ -14,11 +14,40 @@ Think of the opening sequence of **Pokémon Red/Blue** where you wake up in your
 - **Curiosity** — "What are those glowing tiles? I want to touch them."
 - **Comfort** — Despite the void, this place feels safe, guiding, welcoming.
 
+### Camera & Perspective
+**Top-Down 3/4 View (Oblique Projection)**
+
+The overworld uses the classic **three-quarter perspective** seen in retro RPGs:
+- Camera positioned at ~45° angle looking down
+- Characters show their front/back AND top simultaneously
+- Walls/objects show front face AND top face
+- Creates depth illusion while maintaining 2D sprite simplicity
+
+```
+PERSPECTIVE VISUALIZATION:
+
+    Standard Top-Down          3/4 Top-Down (Our Style)
+    ┌─────────────┐            ┌─────────────┐
+    │             │            │   TOP FACE  │
+    │   CIRCLE    │    vs      ├─────────────┤
+    │             │            │ FRONT FACE  │
+    └─────────────┘            └─────────────┘
+    
+    Player sees               Player sees head/shoulders
+    only top of head          AND face (like Pokémon)
+```
+
+**Key Implications:**
+- Character sprites show full body from front, with slight top-of-head visible
+- Objects taller than the player show their front face
+- Ground tiles are drawn as if viewed from directly above
+- Creates the iconic "RPG Maker / Pokémon" feel
+
 ### Reference Points
 | Reference | What to Take |
 |-----------|--------------|
-| Pokémon (Gen 1-3 overworlds) | 16x16/32x32 pixel tile-based movement, 4-directional sprites, clean visual hierarchy |
-| Zelda: Link's Awakening | Dreamy atmosphere, isolated platforming areas, mysterious tone |
+| Pokémon (Gen 1-3 overworlds) | 16x16/32x32 pixel tile-based movement, 4-directional sprites, 3/4 perspective |
+| Zelda: Link's Awakening | Dreamy atmosphere, isolated platforming areas, mysterious tone, 3/4 view |
 | Hyper Light Drifter | Abstract world design, glowing elements against dark backgrounds |
 | Journey | Emotional resonance through environment, wordless storytelling |
 | Monument Valley | Impossible geometry, meditative puzzle spaces |
@@ -59,10 +88,12 @@ Think of the opening sequence of **Pokémon Red/Blue** where you wake up in your
 ```
 
 ### Dimensions
+- **Perspective:** Top-down 3/4 view (oblique projection)
 - **Total Area:** 1280 × 1024 pixels (20 × 16 tiles @ 64px)
 - **Tile Grid:** 64 × 64 pixel tiles
 - **Platform Tiles:** Inner platform tiles are 16x16 pixel sprites scaled 4x for retro look
 - **Camera Bounds:** Tight to platforms, void visible at all edges
+- **Vertical Depth:** Objects closer to bottom of screen appear "in front"
 
 ---
 

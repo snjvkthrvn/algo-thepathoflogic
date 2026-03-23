@@ -28,3 +28,6 @@ archive/
 *.sln
 *.sw?
 nul
+
+# Cursor IDE
+.cursor/

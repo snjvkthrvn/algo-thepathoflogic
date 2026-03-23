@@ -11,9 +11,27 @@
 
 ### Visual Identity
 - **Style:** 16-bit pixel art (like Pokémon Gen 3-4, Zelda: Link's Awakening)
-- **Perspective:** Top-down overhead exploration
+- **Perspective:** **Top-down 3/4 view** (oblique projection)—camera at ~45° angle showing both top and front faces of objects, exactly like classic Pokémon/Zelda overworlds
 - **Transitions:** Pokemon-style "battle swirl" when entering puzzles
 - **UI:** Clean, minimal, respects the retro aesthetic
+
+### Perspective Details
+```
+TOP-DOWN 3/4 VIEW (Our Overworld Camera):
+
+   What the player sees:
+   
+   ┌─────────────┐
+   │  ROOF/TOP   │  ← Top face visible
+   ├─────────────┤
+   │   FRONT     │  ← Front face visible  
+   │   WALL      │
+   └─────────────┘
+   
+   Characters show HEAD (slight top view) + FULL BODY (front view)
+   Buildings show ROOF + FRONT FACADE
+   Ground/floors are pure top-down
+```
 
 ### Core Loop
 ```

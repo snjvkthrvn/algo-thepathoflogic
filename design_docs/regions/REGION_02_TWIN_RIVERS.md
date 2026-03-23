@@ -13,11 +13,39 @@ This region embodies **duality and balance**. Every element has a mirror. Every 
 
 **THE CORE METAPHOR:** Two pointers are two travelers walking the same path from opposite ends. Sliding windows are boats drifting down the river, capturing what flows through them. The region itself IS the data structure.
 
+### Camera & Perspective
+**Top-Down 3/4 View (Oblique Projection)**
+
+The overworld uses the classic **three-quarter perspective** seen in retro RPGs:
+- Camera positioned at ~45° angle looking down
+- Characters show their front/back AND top simultaneously
+- Rivers show surface AND depth through color/shading
+- Bridges show deck AND side railings
+
+```
+BRIDGE OVER RIVER EXAMPLE:
+
+    ════════════════════   ← Bridge deck (walkable surface)
+    │  │          │  │     ← Railings (front face visible)
+    ≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈   ← Water surface
+    ≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈   ← Deeper water (darker)
+    
+    Bridge shows deck AND railings
+    Water shows surface with depth gradient
+```
+
+**Key Implications:**
+- Dual rivers flow vertically on screen (south = toward player)
+- Banks on left/right with water between
+- Bridges span horizontally, showing depth
+- Willow trees show trunk AND hanging branches
+- Creates serene, mirrored atmosphere
+
 ### Reference Points
 | Reference | What to Take |
 |-----------|--------------|
-| Pokémon Ruby/Sapphire | Water routes, bridges, dual-themed design |
-| Zelda: Oracle of Ages | Time/mirrored worlds, visual duality |
+| Pokémon Ruby/Sapphire | Water routes, bridges, dual-themed design, 3/4 view |
+| Zelda: Oracle of Ages | Time/mirrored worlds, visual duality, oblique projection |
 | Ori and the Blind Forest | Flowing water, ethereal atmosphere |
 | Ghibli films (Spirited Away) | Bridge crossings, spiritual/natural blend |
 | Chinese landscape painting | Balance, flowing water, mountain reflections |
@@ -83,11 +111,14 @@ ORANGE RIVER: Flows NORTH → Turbulent, varying speed
 ```
 
 ### Dimensions
+- **Perspective:** Top-down 3/4 view (oblique projection)
 - **Total Area:** 3200 × 1600 pixels (50 × 25 tiles @ 64px)
 - **Linear Layout:** Longer horizontal than vertical (river follows)
 - **River Width:** 4-6 tiles wide each
 - **Bridge Width:** 2 tiles, various lengths
 - **Bank Depth:** 3-4 tiles of walkable land per side
+- **Vertical Depth:** Objects closer to bottom of screen appear "in front"
+- **Water Layering:** Rivers show 2-3 depth layers (surface, mid, deep)
 
 ---
 

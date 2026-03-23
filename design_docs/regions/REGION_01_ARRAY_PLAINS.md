@@ -13,12 +13,42 @@ This region channels the **Pokémon Route 1 feeling**—that first step out of y
 
 **THE CORE METAPHOR:** Arrays are farms. Each "index" is a numbered plot. Each "element" is what grows there. Sorting is reorganizing crops. Hashing is choosing which barn to store things in. Two Sum is finding two plots that together produce a target harvest.
 
+### Camera & Perspective
+**Top-Down 3/4 View (Oblique Projection)**
+
+The overworld uses the classic **three-quarter perspective** seen in retro RPGs:
+- Camera positioned at ~45° angle looking down
+- Characters show their front/back AND top simultaneously
+- Buildings show front facade AND roof
+- Crops/objects have visible height, creating layered depth
+
+```
+FARM BUILDING EXAMPLE:
+
+    ┌───────────────┐   ← Roof visible (top face)
+    │   ▲   ▲   ▲   │   ← Roof shingles
+    ├───────────────┤
+    │   WEST BARN   │   ← Front facade (front face)
+    │   ┌─────┐     │
+    │   │ 🚪  │     │   ← Door, windows visible
+    └───────────────┘
+    
+    Barn shows BOTH roof and front wall
+    Classic 3/4 RPG perspective
+```
+
+**Key Implications:**
+- Character sprites show full body from front, head slightly visible from above
+- Barns/sheds show roof AND front wall
+- Crop fields visible from above with slight depth shading
+- Creates warm, inviting farmland atmosphere
+
 ### Reference Points
 | Reference | What to Take |
 |-----------|--------------|
-| Pokémon Gold/Silver (Johto) | Rural routes, farm NPCs, peaceful atmosphere |
-| Stardew Valley | Farm aesthetic, pixel art crops, golden hour lighting |
-| Zelda: Minish Cap | Detailed 2D environments, charming character designs |
+| Pokémon Gold/Silver (Johto) | Rural routes, farm NPCs, peaceful atmosphere, 3/4 view |
+| Stardew Valley | Farm aesthetic, pixel art crops, golden hour lighting, 3/4 perspective |
+| Zelda: Minish Cap | Detailed 2D environments, charming character designs, oblique view |
 | Harvest Moon GBA | Barn interiors, tool-based interactions |
 | Mother 3 | Emotional NPCs, grounded fantasy |
 
@@ -70,10 +100,13 @@ This region channels the **Pokémon Route 1 feeling**—that first step out of y
 ```
 
 ### Dimensions
+- **Perspective:** Top-down 3/4 view (oblique projection)
 - **Total Area:** 2560 × 1920 pixels (40 × 30 tiles @ 64px)
 - **Tile Grid:** 64 × 64 pixel base (16x16 pixel art scaled 4x)
 - **Walkable Paths:** Stone paths 2-3 tiles wide
 - **Crop Fields:** 8x8 tile sections with numbered rows
+- **Vertical Depth:** Objects closer to bottom of screen appear "in front"
+- **Building Height:** Barns/sheds show 2-3 tile front face + 1-2 tile roof
 
 ---
 
