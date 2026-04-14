@@ -1,6 +1,8 @@
 /**
  * Pre-written Concept Bridge content for each puzzle.
- * Source of truth for the educational layer.
+ *
+ * Narrative source of truth: narrative_design/POKEMON_STYLE_GAME_SCRIPT.md
+ * Keep the teaching flow aligned to FEEL -> NAME -> USE.
  */
 
 export interface ConceptBridgeContent {
@@ -19,17 +21,17 @@ export const CONCEPT_BRIDGE_DATA: Record<string, ConceptBridgeContent> = {
     puzzleId: 'p0_1',
     sections: {
       storyRecap: [
-        'You followed the ancient rune patterns, tracing paths that the first Sequencers laid down.',
-        'Each rune glowed in order, and you reproduced the sequence exactly -- proving you understand that order matters.',
-        'This is the foundation of all algorithms: processing elements one at a time, in sequence.',
+        'The Rune Keeper showed you a pattern, and Bit hovered beside each glowing tile as if urging you forward.',
+        'You felt the rule in your feet: first this, then that, then the next. Order was not a lecture. It was the puzzle itself.',
+        'Now that you have lived it, we can give that feeling its name.',
       ],
       patternReveal: {
-        title: 'Sequential Processing (Iteration)',
+        title: 'Sequences: First This, Then That',
         explanation: [
-          'What you just did is called SEQUENTIAL PROCESSING -- going through a list of items one by one, in order.',
-          'In programming, this is called ITERATION. A "for loop" visits each element of an array exactly once.',
-          'Arrays are the simplest data structure: items stored in a line, accessed by their position (index).',
-          'The order you followed (1st, 2nd, 3rd...) is exactly how a computer reads through an array.',
+          'What you just felt has a computer-science name: sequential processing.',
+          'A program often solves work one step at a time, in order, the same way you walked the runes.',
+          'When those steps are stored in a line, we often call that line an array.',
+          'Iteration is simply the formal name for moving through that line from one position to the next.',
         ],
       },
       pseudocode: {
@@ -42,7 +44,7 @@ export const CONCEPT_BRIDGE_DATA: Record<string, ConceptBridgeContent> = {
         step_on(position)    // Reproduce the sequence
         if wrong:
             restart()        // Try again from beginning`,
-        explanation: 'This loop processes each rune in order -- just like iterating through an array. The "for each" structure visits every element exactly once.',
+        explanation: 'This is the same rule in code form: move through the pattern in order, one step at a time, and restart if the sequence breaks.',
       },
       miniForge: {
         question: 'What is the output of this code?\n\narr = [10, 20, 30, 40]\nfor i in range(len(arr)):\n    print(arr[i])',
@@ -58,31 +60,31 @@ export const CONCEPT_BRIDGE_DATA: Record<string, ConceptBridgeContent> = {
     puzzleId: 'p0_2',
     sections: {
       storyRecap: [
-        'You matched each flow shard to its console, restoring connections the Execution had severed.',
-        'Each shard had unique properties -- shape, pattern, color -- and each console needed exactly one match.',
-        'You didn\'t need to search every combination. You looked at the key, and knew where it belonged.',
+        'Each shard told you where it belonged. Triangle with double stripes, diamond with a single stripe, and circle with triple stripes each pointed to one exact console.',
+        'Bit warmed near the right destination. Nearby, Glitch kept forcing random fits and learned the hard way how slow guessing can be.',
+        'You felt the difference between searching blindly and matching by rule.',
       ],
       patternReveal: {
-        title: 'Key-Value Mapping (Hash Maps)',
+        title: 'Mapping: Every Key Has a Value',
         explanation: [
-          'What you just did is called KEY-VALUE MAPPING -- using a unique identifier (the key) to find its match (the value) instantly.',
-          'In programming, this data structure is called a HASH MAP (or dictionary, or object).',
-          'Instead of searching through every item (slow!), you jump directly to the right answer using the key.',
-          'Hash maps are one of the most powerful tools in computer science -- they make lookups instant.',
+          'What you just felt has a name: mapping.',
+          'Given the right identifying details, you can go straight to the correct destination instead of checking every possibility.',
+          'In code, one common tool for this is a hash map, also called a dictionary or object.',
+          'The key points to the answer. That is why good mappings make lookups feel instant.',
         ],
       },
       pseudocode: {
         code: `consoleMap = {
-    "circle-solid-red": console_1,
-    "triangle-striped-blue": console_2,
-    "square-dotted-green": console_3
+    "triangle_double": redConsole,
+    "diamond_single": blueConsole,
+    "circle_triple": greenConsole
 }
 
 function placeShard(shard):
-    key = shard.shape + shard.pattern + shard.color
-    target = consoleMap[key]  // Instant lookup!
+    key = shard.shape + "_" + shard.stripes
+    target = consoleMap[key]
     place(shard, target)`,
-        explanation: 'The hash map stores each console indexed by its shard properties. Looking up where a shard goes is instant -- O(1) time complexity.',
+        explanation: 'The map stores each console under a descriptive key. Once the key is known, the destination is a direct lookup instead of a search.',
       },
       miniForge: {
         question: 'You have a dictionary: d = {"apple": 1, "banana": 2, "cherry": 3}\nWhat does d["banana"] return?',
@@ -98,18 +100,17 @@ function placeShard(shard):
     puzzleId: 'boss_sentinel',
     sections: {
       storyRecap: [
-        'The Sentinel tested everything you\'d learned -- patterns and mappings, chaos and order.',
-        'In Phase 1, you proved you could read and reproduce sequences under pressure.',
-        'In Phase 2, you matched fragments to sockets while dodging energy orbs.',
-        'In Phase 3, you combined both skills simultaneously -- the true test of mastery.',
+        'The Sentinel did not ask for a brand-new trick. It asked whether you could combine what you had already earned.',
+        'First came order. Then matching. Then both at once while the pressure rose.',
+        'That is what mastery feels like: simple ideas held steady together.',
       ],
       patternReveal: {
-        title: 'Combined Algorithms & Authentication',
+        title: 'Using Two Ideas at Once',
         explanation: [
-          'The Sentinel was an authentication challenge -- proving you have the right to pass.',
-          'Real security systems combine multiple verification methods: something you know (the pattern), something you have (the shard).',
-          'In programming, this is like passing multiple checks before gaining access to a resource.',
-          'The escalating difficulty mirrors how security systems increase verification for higher-privilege operations.',
+          'The Sentinel behaved like a gatekeeper checking whether you truly understood both lessons from the Chamber of Flow.',
+          'Good systems often verify more than one thing before they let you pass: know the pattern, carry the right key, stay correct under pressure.',
+          'In computing, this is the logic behind layered checks and authentication.',
+          'Real understanding is not memorizing one move. It is combining simple rules at the right moment.',
         ],
       },
       pseudocode: {
@@ -127,7 +128,7 @@ function placeShard(shard):
         return DENIED
 
     return AUTHORIZED  // Access granted!`,
-        explanation: 'Multi-factor authentication checks multiple conditions before granting access. Each phase of the boss fight was one factor in this authentication process.',
+        explanation: 'The Sentinel fight modeled layered verification: pass one check, then the next, then prove you can coordinate both together.',
       },
       miniForge: {
         question: 'A function checks 3 conditions. If any fails, access is denied. What is this pattern called?',
