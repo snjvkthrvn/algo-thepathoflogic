@@ -25,4 +25,11 @@ describe('sentinelScriptRules', () => {
     expect(getNextSentinelPhase('mapping_test')).toBe('combined_test');
     expect(getNextSentinelPhase('combined_test')).toBe('victory');
   });
+
+  it('keeps the boss handoff focused on the Sentinel and not a third concept bridge', () => {
+    expect(shouldSkipConceptBridge('boss_sentinel')).toBe(true);
+    expect(SENTINEL_SCRIPT_PHASES[0].title).toContain('Sequence');
+    expect(SENTINEL_SCRIPT_PHASES[1].title).toContain('Mapping');
+    expect(SENTINEL_SCRIPT_PHASES[2].title).toContain('Combined');
+  });
 });

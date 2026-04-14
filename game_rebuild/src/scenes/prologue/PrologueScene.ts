@@ -284,6 +284,9 @@ export class PrologueScene extends Phaser.Scene {
     this.lockCutscene();
     this.dialogueSystem.startDialogue(professorNodePostPuzzle, 'professor_node', () => {
       gameState.setFlag('boss_gate_cutscene_done', true);
+      if (this.bossGate) {
+        this.showGateOpenEffect(this.bossGate);
+      }
       this.unlockCutscene();
     });
   }
@@ -291,6 +294,10 @@ export class PrologueScene extends Phaser.Scene {
   private startBossReturnCutscene(): void {
     this.lockCutscene();
     this.dialogueSystem.startDialogue(professorNodeBossReturnDialogue, 'professor_node', () => {
+      this.gateway?.setLocked(false);
+      if (this.gateway) {
+        this.showGateOpenEffect(this.gateway);
+      }
       this.unlockCutscene();
     });
   }
@@ -426,7 +433,7 @@ export class PrologueScene extends Phaser.Scene {
       locked: !gatewayOpen,
       onInteract: () => {
         if (progressionSystem.isGatewayOpen()) {
-          this.showComingSoon();
+          this.showMessage('Array Plains awaits.', COLORS.GOLD_ACCENT);
         } else {
           this.showLockedMessage('Defeat the Sentinel to unlock the gateway.');
         }
@@ -580,12 +587,16 @@ export class PrologueScene extends Phaser.Scene {
   }
 
   private showLockedMessage(text: string): void {
+    this.showMessage(text, COLORS.ERROR);
+  }
+
+  private showMessage(text: string, color: number = COLORS.TEXT_LIGHT): void {
     const { width, height } = this.cameras.main;
     const worldPoint = this.cameras.main.getWorldPoint(width / 2, height / 2);
     const msg = this.add.text(worldPoint.x, worldPoint.y - 60, text, {
       fontSize: '12px',
       fontFamily: '"Press Start 2P", monospace',
-      color: '#ef4444',
+      color: Phaser.Display.Color.IntegerToColor(color).rgba,
       stroke: '#000000',
       strokeThickness: 3,
       align: 'center',
@@ -617,40 +628,6 @@ export class PrologueScene extends Phaser.Scene {
     audioManager.playTone(440, 300, 'sine');
     this.time.delayedCall(200, () => audioManager.playTone(554, 300, 'sine'));
     this.time.delayedCall(400, () => audioManager.playTone(659, 400, 'sine'));
-  }
-
-  private showComingSoon(): void {
-    const { width, height } = this.cameras.main;
-
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
-      .setOrigin(0).setScrollFactor(0).setDepth(8000);
-
-    const text = this.add.text(width / 2, height / 2 - 20, 'ARRAY PLAINS', {
-      fontSize: '24px',
-      fontFamily: '"Press Start 2P", monospace',
-      color: '#06b6d4',
-      stroke: '#000000',
-      strokeThickness: 4,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(8001);
-
-    const subtext = this.add.text(width / 2, height / 2 + 30, 'Coming Soon...', {
-      fontSize: '14px',
-      fontFamily: '"Press Start 2P", monospace',
-      color: '#9ca3af',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(8001);
-
-    const back = this.add.text(width / 2, height / 2 + 80, '[SPACE] Return', {
-      fontSize: '10px',
-      fontFamily: '"Press Start 2P", monospace',
-      color: '#fbbf24',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(8001);
-
-    this.input.keyboard?.once('keydown-SPACE', () => {
-      overlay.destroy();
-      text.destroy();
-      subtext.destroy();
-      back.destroy();
-    });
   }
 
   shutdown(): void {
