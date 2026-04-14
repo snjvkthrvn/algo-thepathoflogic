@@ -31,3 +31,6 @@ nul
 
 # Cursor IDE
 .cursor/
+
+# Local git worktrees
+.worktrees/
