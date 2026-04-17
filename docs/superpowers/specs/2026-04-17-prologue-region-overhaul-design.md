@@ -56,7 +56,7 @@ Platform clusters (each cluster is a group of `tileset.png` cubes rendered in is
 | Bridge hub→north | (900, 265) | 3 tiles (vertical) | Path to P0-1 branch |
 | North branch (P0-1) | (900, 150) | 3 wide × 3 deep | Rune Keeper, P0-1 portal |
 | Bridge hub→south | (900, 525) | 3 tiles (vertical) | Path to P0-2 branch |
-| South branch (P0-2) | (900, 630) | 3 wide × 3 deep | Console Keeper, P0-2 portal |
+| South branch (P0-2) | (900, 640) | 3 wide × 3 deep | Console Keeper, P0-2 portal |
 | Bridge hub→east | 1080–1780 along y=400 | 7 tiles (long path) | Path to gate courtyard |
 | Gate courtyard | (1900, 395) | 5 wide × 3 deep | Sentinel gate + Array Plains portal |
 
@@ -171,7 +171,7 @@ Where `variant` picks one of the 24 tileset frames. Cyan-top variants are used o
 
 A helper `PlatformBuilder` class iterates `tiles` and instantiates `scene.add.image(dx, dy, 'prologue-tileset', frameIndex)` relative to the cluster origin.
 
-The current procedural `createPlatforms()` in `PrologueScene.ts` is deleted; the void-fall check continues to use the same `PROLOGUE_PLATFORMS` bounding-box data but re-expressed as cluster footprints.
+The current procedural `createPlatforms()` in `PrologueScene.ts` is replaced with sprite-based rendering; the void-fall check continues to read bounding-box data but sources it from the new `PROLOGUE_CLUSTERS` `footprint` field instead of `PROLOGUE_PLATFORMS`.
 
 ### 8.2 Player and companions
 
@@ -230,9 +230,9 @@ No change to the dialogue data model or text rendering logic — only the frame 
 `PROLOGUE_CONFIG.spawnPoint` moves from (400, 500) to (320, 400).
 `PROLOGUE_CONFIG.npcs[professor_node]` position (640, 400) → (900, 395).
 `PROLOGUE_CONFIG.npcs[rune_keeper]` position (900, 280) → (900, 150).
-`PROLOGUE_CONFIG.npcs[console_keeper]` position (900, 520) → (900, 630).
+`PROLOGUE_CONFIG.npcs[console_keeper]` position (900, 520) → (900, 640).
 `PROLOGUE_CONFIG.puzzles[p0_1]` position (950, 280) → (900, 120).
-`PROLOGUE_CONFIG.puzzles[p0_2]` position (950, 520) → (900, 660).
+`PROLOGUE_CONFIG.puzzles[p0_2]` position (950, 520) → (900, 670).
 `PROLOGUE_CONFIG.exitPoints[boss_gate]` position (1100, 400) → (1830, 395).
 `PROLOGUE_CONFIG.exitPoints[array_plains_gateway]` position (1200, 400) → (2000, 395).
 
@@ -271,7 +271,7 @@ Alignment checks:
 Asset load checks:
 - Intercept network traffic; every PNG under `assets/prologue/` returns 200
 - `window.__PHASER_GAME__.textures.list` contains every key from §6.1/§6.2
-- No `[Phaser] Missing texture` warnings in the console
+- No texture-loading errors or "missing texture" warnings in the console
 
 Gameplay smoke checks:
 - Spawn → walk east → reach hub → both north and south bridges visible
