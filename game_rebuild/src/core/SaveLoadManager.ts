@@ -5,6 +5,7 @@
 import { gameState } from './GameStateManager';
 import { eventBus, GameEvents } from './EventBus';
 import type { GameState } from '../data/types';
+import { BitStage, BitMood } from '../data/types';
 
 const SAVE_KEY = 'algorithmia_save_v1';
 const CURRENT_VERSION = 1;
@@ -35,12 +36,10 @@ class SaveLoadManagerClass {
 
       const state: GameState = JSON.parse(saveData);
 
-      // Version migration
-      if (state.saveVersion < CURRENT_VERSION) {
-        this.migrate(state);
-      }
+      // Always migrate — adds any fields missing from older saves
+      this.migrate(state);
 
-      // Validate structure
+      // Validate core structure
       if (!this.validate(state)) {
         console.warn('Save data validation failed, starting fresh');
         return false;
@@ -76,8 +75,17 @@ class SaveLoadManagerClass {
   }
 
   private migrate(state: GameState): void {
-    // Future migration logic goes here
-    // Example: if (state.saveVersion === 1) { migrate to 2 }
+    // Inject missing fields added in newer builds so old saves still load cleanly.
+    // This is always called on load — each block is idempotent.
+    if (!state.companion) {
+      state.companion = { stage: BitStage.SPARK, mood: BitMood.NEUTRAL };
+    }
+    if (!state.rival) {
+      state.rival = { encountered: false, encounterStage: 0 };
+    }
+    if (!Array.isArray(state.shardsCollected)) {
+      state.shardsCollected = [];
+    }
     state.saveVersion = CURRENT_VERSION;
   }
 }

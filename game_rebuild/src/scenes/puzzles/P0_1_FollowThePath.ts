@@ -8,6 +8,7 @@ import { BasePuzzleScene } from './BasePuzzleScene';
 import { SCENE_KEYS, COLORS } from '../../config/constants';
 import { adjustBrightness } from '../../utils/colors';
 import { audioManager } from '../../core/AudioManager';
+import { BitHint } from '../../entities/BitHint';
 
 type PuzzleState = 'INTRO' | 'SHOWING_PATTERN' | 'PLAYER_TURN' | 'FEEDBACK' | 'ROUND_COMPLETE' | 'PUZZLE_COMPLETE';
 
@@ -39,6 +40,7 @@ export class P0_1_FollowThePath extends BasePuzzleScene {
   private puzzleState: PuzzleState = 'INTRO';
   private roundMistakes: number = 0;
   private hintText: Phaser.GameObjects.Text | null = null;
+  private bitHint!: BitHint;
 
   constructor() {
     super({ key: SCENE_KEYS.PUZZLE_P0_1 });
@@ -51,6 +53,10 @@ export class P0_1_FollowThePath extends BasePuzzleScene {
     super.create();
     this.createTiles();
     this.puzzleState = 'INTRO';
+
+    // Place Bit near the center, above the tile ring
+    const { width, height } = this.cameras.main;
+    this.bitHint = new BitHint(this, width / 2, height / 2 - 80);
 
     // Brief intro then start first round
     this.time.delayedCall(800, () => {
@@ -170,6 +176,10 @@ export class P0_1_FollowThePath extends BasePuzzleScene {
       this.time.delayedCall(delay, () => {
         this.glowTile(tileIndex, 1000);
         audioManager.playTone(300 + tileIndex * 80, 200, 'sine');
+        // Bit hovers near each tile as it glows — helps player track the path
+        const tile = this.tiles[tileIndex];
+        this.bitHint.moveTo(tile.x, tile.y - 55);
+        this.bitHint.showNeutral();
       });
 
       delay += 1300; // 1.0s glow + 0.3s gap
@@ -180,6 +190,9 @@ export class P0_1_FollowThePath extends BasePuzzleScene {
       this.puzzleState = 'PLAYER_TURN';
       this.playerInputIndex = 0;
       this.showMessage('Your turn!', COLORS.GOLD_ACCENT);
+      // Bit returns to center, ready to react to player input
+      const { width, height } = this.cameras.main;
+      this.bitHint.moveTo(width / 2, height / 2 - 80);
     });
   }
 
@@ -209,6 +222,7 @@ export class P0_1_FollowThePath extends BasePuzzleScene {
       // Correct!
       this.glowTile(index, 300);
       audioManager.playTone(300 + index * 80, 100, 'sine');
+      this.bitHint.showWarm();
 
       this.playerInputIndex++;
 
@@ -217,6 +231,7 @@ export class P0_1_FollowThePath extends BasePuzzleScene {
         this.puzzleState = 'ROUND_COMPLETE';
         audioManager.playCorrectTone();
         this.showMessage('Sequence Complete!', COLORS.SUCCESS);
+        this.bitHint.showNeutral();
 
         this.time.delayedCall(1500, () => {
           this.currentRound++;
@@ -229,6 +244,7 @@ export class P0_1_FollowThePath extends BasePuzzleScene {
       this.attempts++;
       this.roundMistakes++;
       audioManager.playWrongTone();
+      this.bitHint.showCold();
 
       // Red flash on wrong tile
       const tile = this.tiles[index];
@@ -253,6 +269,7 @@ export class P0_1_FollowThePath extends BasePuzzleScene {
 
   private puzzleComplete(): void {
     this.puzzleState = 'PUZZLE_COMPLETE';
+    this.bitHint.celebrate();
 
     // Calculate stars
     let stars = 1;

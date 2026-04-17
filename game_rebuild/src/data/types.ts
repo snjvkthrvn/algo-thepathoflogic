@@ -50,6 +50,23 @@ export enum PlayerState {
   FROZEN = 'frozen',
 }
 
+export enum BitStage {
+  SPARK = 'spark',       // Single particle - just met you
+  BYTE = 'byte',         // 8 particles in a line - arrays unlocked
+  FRAME = 'frame',       // Rectangle outline - patterns recognized
+  BRANCH = 'branch',     // Branching form - conditionals learned
+  GRAPH = 'graph',       // Connected nodes - graphs understood
+  CORE = 'core',         // Full radiant form - all concepts mastered
+}
+
+export enum BitMood {
+  NEUTRAL = 'neutral',
+  EXCITED = 'excited',   // Puzzle solved, new region
+  SCARED = 'scared',     // Void nearby, Glitch encounter
+  HINT_WARM = 'hint_warm', // Player is on the right track
+  HINT_COLD = 'hint_cold', // Player is moving away from solution
+}
+
 // ============================================================================
 // REGION TYPES
 // ============================================================================
@@ -339,12 +356,25 @@ export interface VictoryRewards {
 // GAME STATE TYPES
 // ============================================================================
 
+export interface CompanionState {
+  stage: BitStage;
+  mood: BitMood;
+}
+
+export interface RivalState {
+  encountered: boolean;
+  encounterStage: number; // 0=never met, 1=prologue taunt, 2=array plains, 3+=later
+}
+
 export interface GameState {
   player: {
     x: number;
     y: number;
     region: string;
   };
+  companion: CompanionState;
+  rival: RivalState;
+  shardsCollected: string[];
   puzzleResults: Record<string, PuzzleResult>;
   codexEntries: string[];
   npcStates: Record<string, string>;
