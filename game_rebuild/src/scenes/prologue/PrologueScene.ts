@@ -33,6 +33,7 @@ import {
   getPendingPrologueBeat,
   shouldTriggerWatcherAtPosition,
 } from '../../prologue/prologueScriptState';
+import { isOnWalkablePlatform, shouldRespawnFromVoid } from '../../prologue/platformBounds';
 
 export class PrologueScene extends Phaser.Scene {
   private player!: Player;
@@ -52,6 +53,7 @@ export class PrologueScene extends Phaser.Scene {
   private onDialogueAction!: (...args: unknown[]) => void;
   private onGateOpen!: (...args: unknown[]) => void;
   private isCutsceneLocked = false;
+  private isRespawning = false;
 
   constructor() {
     super({ key: SCENE_KEYS.PROLOGUE });
@@ -181,6 +183,7 @@ export class PrologueScene extends Phaser.Scene {
     // Update player
     if (!this.dialogueSystem.isDialogueActive() && !this.isCutsceneLocked) {
       this.player.update();
+      this.checkVoidFall();
     }
 
     // Update companion — Bit always follows, even during dialogue
@@ -506,42 +509,23 @@ export class PrologueScene extends Phaser.Scene {
   }
 
   private checkVoidFall(): void {
-    const pos = this.player.getPosition();
-    let onPlatform = false;
+    if (this.isRespawning) return;
 
-    for (const plat of PROLOGUE_PLATFORMS) {
-      if (
-        pos.x >= plat.x &&
-        pos.x <= plat.x + plat.width &&
-        pos.y >= plat.y - 10 &&
-        pos.y <= plat.y + plat.height + 10
-      ) {
-        onPlatform = true;
-        this.player.updateSafePosition();
-        break;
-      }
+    const pos = this.player.getPosition();
+
+    if (isOnWalkablePlatform(pos, PROLOGUE_PLATFORMS)) {
+      this.player.updateSafePosition();
+      return;
     }
 
-    if (!onPlatform) {
-      // Check if far enough from any platform to be "falling"
-      let nearPlatform = false;
-      for (const plat of PROLOGUE_PLATFORMS) {
-        const cx = plat.x + plat.width / 2;
-        const cy = plat.y + plat.height / 2;
-        const dist = Math.sqrt((pos.x - cx) ** 2 + (pos.y - cy) ** 2);
-        if (dist < Math.max(plat.width, plat.height)) {
-          nearPlatform = true;
-          break;
-        }
-      }
-
-      if (!nearPlatform) {
-        this.respawnPlayer();
-      }
+    if (shouldRespawnFromVoid(pos, PROLOGUE_PLATFORMS)) {
+      this.respawnPlayer();
     }
   }
 
   private respawnPlayer(): void {
+    if (this.isRespawning) return;
+    this.isRespawning = true;
     this.player.freeze();
 
     const { width, height } = this.cameras.main;
@@ -566,6 +550,7 @@ export class PrologueScene extends Phaser.Scene {
           onComplete: () => {
             overlay.destroy();
             this.player.unfreeze();
+            this.isRespawning = false;
           },
         });
       },
