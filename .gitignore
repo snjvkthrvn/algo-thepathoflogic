@@ -31,3 +31,14 @@ nul
 
 # Cursor IDE
 .cursor/
+
+# Local tool state
+.superpowers/
+.remember/
+
+# Local package manager caches
+npm-cache/
+game_rebuild/npm-cache/
+
+# Local git worktrees
+.worktrees/
