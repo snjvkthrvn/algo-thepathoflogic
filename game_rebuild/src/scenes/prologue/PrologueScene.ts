@@ -6,27 +6,43 @@
 import Phaser from 'phaser';
 import { COLORS, SCENE_KEYS, VOID_RESPAWN_CHECK_INTERVAL } from '../../config/constants';
 import { Player } from '../../entities/Player';
+import { BitCompanion } from '../../entities/BitCompanion';
+import { GlitchRival } from '../../entities/GlitchRival';
 import { NPC } from '../../entities/NPC';
 import { InteractableObject } from '../../entities/InteractableObject';
 import { DialogueSystem } from '../../systems/DialogueSystem';
 import { InteractionSystem, type InteractableEntry } from '../../systems/InteractionSystem';
 import { NPCBehaviorSystem } from '../../systems/NPCBehaviorSystem';
-import { ProgressionSystem } from '../../systems/ProgressionSystem';
+import { progressionSystem } from '../../systems/ProgressionSystem';
 import { HUDManager } from '../../systems/HUDManager';
 import { TransitionManager } from '../../core/TransitionManager';
 import { audioManager } from '../../core/AudioManager';
 import { gameState } from '../../core/GameStateManager';
-import { eventBus } from '../../core/EventBus';
+import { eventBus, GameEvents } from '../../core/EventBus';
+import { BitMood } from '../../data/types';
+import {
+  professorNodeBossReturnDialogue,
+  professorNodeDialogue,
+  professorNodePostPuzzle,
+} from '../../data/dialogue/prologue_dialogue';
+import { prologueGlitchIntroDialogue } from '../../data/dialogue/glitch_dialogue';
 import { PROLOGUE_NPCS } from '../../data/npcs/prologue_npcs';
 import { PROLOGUE_PLATFORMS, PROLOGUE_CONFIG } from '../../data/regions/prologue';
+import {
+  createPrologueStoryFlags,
+  getPendingPrologueBeat,
+  shouldTriggerWatcherAtPosition,
+} from '../../prologue/prologueScriptState';
+import { isOnWalkablePlatform, shouldRespawnFromVoid } from '../../prologue/platformBounds';
 
 export class PrologueScene extends Phaser.Scene {
   private player!: Player;
+  private bit!: BitCompanion;
+  private glitch!: GlitchRival;
   private npcs: NPC[] = [];
   private dialogueSystem!: DialogueSystem;
   private interactionSystem!: InteractionSystem;
   private npcBehavior!: NPCBehaviorSystem;
-  private progression!: ProgressionSystem;
   private hud!: HUDManager;
   private starGraphics!: Phaser.GameObjects.Graphics;
   private stars: { x: number; y: number; alpha: number; speed: number; size: number }[] = [];
@@ -36,6 +52,8 @@ export class PrologueScene extends Phaser.Scene {
   private safePositionTimer!: Phaser.Time.TimerEvent;
   private onDialogueAction!: (...args: unknown[]) => void;
   private onGateOpen!: (...args: unknown[]) => void;
+  private isCutsceneLocked = false;
+  private isRespawning = false;
 
   constructor() {
     super({ key: SCENE_KEYS.PROLOGUE });
@@ -68,6 +86,10 @@ export class PrologueScene extends Phaser.Scene {
     const state = gameState.getState();
     this.player = new Player(this, state.player.x, state.player.y);
 
+    // === COMPANIONS ===
+    this.bit = new BitCompanion(this, state.player.x, state.player.y);
+    this.glitch = new GlitchRival(this);
+
     // === NPCS ===
     this.npcBehavior = new NPCBehaviorSystem();
     this.createNPCs();
@@ -77,7 +99,7 @@ export class PrologueScene extends Phaser.Scene {
     // === SYSTEMS ===
     this.dialogueSystem = new DialogueSystem(this);
     this.interactionSystem = new InteractionSystem(this, this.player);
-    this.progression = new ProgressionSystem();
+    // progressionSystem is a singleton — already active, no instantiation needed
     this.hud = new HUDManager(this);
 
     // Register NPCs with systems
@@ -91,7 +113,7 @@ export class PrologueScene extends Phaser.Scene {
 
     // === INTERACTION HANDLER ===
     this.interactionSystem.onInteract((entry: InteractableEntry) => {
-      if (this.dialogueSystem.isDialogueActive()) return;
+      if (this.dialogueSystem.isDialogueActive() || this.isCutsceneLocked) return;
 
       if (entry.type === 'npc') {
         const npc = entry.target as NPC;
@@ -153,13 +175,20 @@ export class PrologueScene extends Phaser.Scene {
     } else {
       this.hud.showRegionName('Chamber of Flow');
     }
+
+    this.runPendingBeat();
   }
 
   update(): void {
     // Update player
-    if (!this.dialogueSystem.isDialogueActive()) {
+    if (!this.dialogueSystem.isDialogueActive() && !this.isCutsceneLocked) {
       this.player.update();
+      this.checkVoidFall();
     }
+
+    // Update companion — Bit always follows, even during dialogue
+    const pos = this.player.getPosition();
+    this.bit.update(pos.x, pos.y);
 
     // Update systems
     this.interactionSystem.update();
@@ -168,9 +197,153 @@ export class PrologueScene extends Phaser.Scene {
     // Update starfield
     this.updateStarfield();
 
+    if (!this.dialogueSystem.isDialogueActive() && !this.isCutsceneLocked) {
+      if (shouldTriggerWatcherAtPosition(this.getStoryFlags(), pos)) {
+        this.startWatcherWarning();
+      }
+    }
+
     // Save player position
-    const pos = this.player.getPosition();
     gameState.setPlayerPosition(pos.x, pos.y);
+  }
+
+  private getStoryFlags() {
+    return createPrologueStoryFlags({
+      openingSceneDone: gameState.getFlag('opening_scene_done'),
+      professorNodeIntroDone: gameState.getFlag('professor_node_intro_done'),
+      watcherWarningDone: gameState.getFlag('watcher_warning_done'),
+      glitchIntroDone: gameState.getFlag('glitch_intro_done'),
+      bossGateCutsceneDone: gameState.getFlag('boss_gate_cutscene_done'),
+      bossReturnCutsceneDone: gameState.getFlag('boss_return_cutscene_done'),
+      puzzleP01Complete: gameState.getFlag('puzzle_p0_1_complete'),
+      puzzleP02Complete: gameState.getFlag('puzzle_p0_2_complete'),
+      puzzleBossSentinelComplete: gameState.getFlag('puzzle_boss_sentinel_complete'),
+    });
+  }
+
+  private runPendingBeat(): void {
+    const beat = getPendingPrologueBeat(this.getStoryFlags());
+
+    if (beat === 'opening_scene') this.startOpeningScene();
+    else if (beat === 'node_intro') this.startNodeIntro();
+    else if (beat === 'glitch_intro') this.startGlitchIntro();
+    else if (beat === 'boss_gate_cutscene') this.startBossGateCutscene();
+    else if (beat === 'boss_return_cutscene') this.startBossReturnCutscene();
+  }
+
+  private lockCutscene(): void {
+    this.isCutsceneLocked = true;
+    this.player.setInteracting(true);
+  }
+
+  private unlockCutscene(): void {
+    this.isCutsceneLocked = false;
+    this.player.setInteracting(false);
+  }
+
+  private startOpeningScene(): void {
+    this.lockCutscene();
+    this.dialogueSystem.startDialogue(
+      {
+        startNodeId: 'sys_1',
+        nodes: [
+          { id: 'sys_1', speaker: 'System', text: 'System restored.', nextNodeId: 'sys_2' },
+          { id: 'sys_2', speaker: 'System', text: 'Memory: fragmented', nextNodeId: 'sys_3' },
+          { id: 'sys_3', speaker: 'System', text: 'Status: ready', nextNodeId: 'sys_4' },
+          {
+            id: 'sys_4',
+            speaker: 'System',
+            text: 'Welcome back.',
+            actions: [{ type: 'set_flag', value: 'opening_scene_done' }],
+          },
+        ],
+      },
+      'system',
+      () => {
+        this.unlockCutscene();
+        this.runPendingBeat();
+      },
+    );
+  }
+
+  private startNodeIntro(): void {
+    this.lockCutscene();
+    this.dialogueSystem.startDialogue(professorNodeDialogue, 'professor_node', () => {
+      this.unlockCutscene();
+    });
+  }
+
+  private startGlitchIntro(): void {
+    this.lockCutscene();
+    if (gameState.getGlitchEncounterStage() === 0) {
+      gameState.advanceGlitchEncounter();
+    }
+    this.dialogueSystem.startDialogue(prologueGlitchIntroDialogue, 'glitch', () => {
+      this.unlockCutscene();
+    });
+  }
+
+  private startBossGateCutscene(): void {
+    this.lockCutscene();
+    this.dialogueSystem.startDialogue(professorNodePostPuzzle, 'professor_node', () => {
+      gameState.setFlag('boss_gate_cutscene_done', true);
+      if (this.bossGate) {
+        this.showGateOpenEffect(this.bossGate);
+      }
+      this.unlockCutscene();
+    });
+  }
+
+  private startBossReturnCutscene(): void {
+    this.lockCutscene();
+    this.dialogueSystem.startDialogue(professorNodeBossReturnDialogue, 'professor_node', () => {
+      this.gateway?.setLocked(false);
+      if (this.gateway) {
+        this.showGateOpenEffect(this.gateway);
+      }
+      this.unlockCutscene();
+    });
+  }
+
+  private startWatcherWarning(): void {
+    this.lockCutscene();
+    this.playWatcherFlyby(() => {
+      this.dialogueSystem.startDialogue(
+        {
+          startNodeId: 'watcher_1',
+          nodes: [
+            {
+              id: 'watcher_1',
+              speaker: 'Professor Node',
+              text: "Easy. Don't move.",
+              nextNodeId: 'watcher_2',
+            },
+            {
+              id: 'watcher_2',
+              speaker: 'Professor Node',
+              text: [
+                "That was a Watcher. Part of the Pattern - the system that keeps this world running. It looks for things that seem... out of place.",
+                'Things like us.',
+              ],
+              nextNodeId: 'watcher_3',
+            },
+            {
+              id: 'watcher_3',
+              speaker: 'Professor Node',
+              text: [
+                "Nothing to worry about right now. The Pattern is like a security guard - it patrols, it watches, but as long as you're learning and growing, you're SUPPOSED to be here.",
+                'Now go on. The Keepers are waiting.',
+              ],
+              actions: [{ type: 'set_flag', value: 'watcher_warning_done' }],
+            },
+          ],
+        },
+        'professor_node',
+        () => {
+          this.unlockCutscene();
+        },
+      );
+    });
   }
 
   private createPlatforms(): void {
@@ -241,7 +414,7 @@ export class PrologueScene extends Phaser.Scene {
       prompt: bossGateOpen ? '[SPACE] Enter' : 'Sealed',
       locked: !bossGateOpen,
       onInteract: () => {
-        if (this.progression.isBossGateOpen()) {
+        if (progressionSystem.isBossGateOpen()) {
           TransitionManager.swirl(this, SCENE_KEYS.BOSS_SENTINEL, {
             returnScene: SCENE_KEYS.PROLOGUE,
           });
@@ -262,8 +435,8 @@ export class PrologueScene extends Phaser.Scene {
       prompt: gatewayOpen ? '[SPACE] Enter Gateway' : 'Sealed',
       locked: !gatewayOpen,
       onInteract: () => {
-        if (this.progression.isGatewayOpen()) {
-          this.showComingSoon();
+        if (progressionSystem.isGatewayOpen()) {
+          this.showMessage('Array Plains awaits.', COLORS.GOLD_ACCENT);
         } else {
           this.showLockedMessage('Defeat the Sentinel to unlock the gateway.');
         }
@@ -336,42 +509,23 @@ export class PrologueScene extends Phaser.Scene {
   }
 
   private checkVoidFall(): void {
-    const pos = this.player.getPosition();
-    let onPlatform = false;
+    if (this.isRespawning) return;
 
-    for (const plat of PROLOGUE_PLATFORMS) {
-      if (
-        pos.x >= plat.x &&
-        pos.x <= plat.x + plat.width &&
-        pos.y >= plat.y - 10 &&
-        pos.y <= plat.y + plat.height + 10
-      ) {
-        onPlatform = true;
-        this.player.updateSafePosition();
-        break;
-      }
+    const pos = this.player.getPosition();
+
+    if (isOnWalkablePlatform(pos, PROLOGUE_PLATFORMS)) {
+      this.player.updateSafePosition();
+      return;
     }
 
-    if (!onPlatform) {
-      // Check if far enough from any platform to be "falling"
-      let nearPlatform = false;
-      for (const plat of PROLOGUE_PLATFORMS) {
-        const cx = plat.x + plat.width / 2;
-        const cy = plat.y + plat.height / 2;
-        const dist = Math.sqrt((pos.x - cx) ** 2 + (pos.y - cy) ** 2);
-        if (dist < Math.max(plat.width, plat.height)) {
-          nearPlatform = true;
-          break;
-        }
-      }
-
-      if (!nearPlatform) {
-        this.respawnPlayer();
-      }
+    if (shouldRespawnFromVoid(pos, PROLOGUE_PLATFORMS)) {
+      this.respawnPlayer();
     }
   }
 
   private respawnPlayer(): void {
+    if (this.isRespawning) return;
+    this.isRespawning = true;
     this.player.freeze();
 
     const { width, height } = this.cameras.main;
@@ -396,6 +550,7 @@ export class PrologueScene extends Phaser.Scene {
           onComplete: () => {
             overlay.destroy();
             this.player.unfreeze();
+            this.isRespawning = false;
           },
         });
       },
@@ -417,12 +572,16 @@ export class PrologueScene extends Phaser.Scene {
   }
 
   private showLockedMessage(text: string): void {
+    this.showMessage(text, COLORS.ERROR);
+  }
+
+  private showMessage(text: string, color: number = COLORS.TEXT_LIGHT): void {
     const { width, height } = this.cameras.main;
     const worldPoint = this.cameras.main.getWorldPoint(width / 2, height / 2);
     const msg = this.add.text(worldPoint.x, worldPoint.y - 60, text, {
       fontSize: '12px',
       fontFamily: '"Press Start 2P", monospace',
-      color: '#ef4444',
+      color: Phaser.Display.Color.IntegerToColor(color).rgba,
       stroke: '#000000',
       strokeThickness: 3,
       align: 'center',
@@ -456,40 +615,6 @@ export class PrologueScene extends Phaser.Scene {
     this.time.delayedCall(400, () => audioManager.playTone(659, 400, 'sine'));
   }
 
-  private showComingSoon(): void {
-    const { width, height } = this.cameras.main;
-
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
-      .setOrigin(0).setScrollFactor(0).setDepth(8000);
-
-    const text = this.add.text(width / 2, height / 2 - 20, 'ARRAY PLAINS', {
-      fontSize: '24px',
-      fontFamily: '"Press Start 2P", monospace',
-      color: '#06b6d4',
-      stroke: '#000000',
-      strokeThickness: 4,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(8001);
-
-    const subtext = this.add.text(width / 2, height / 2 + 30, 'Coming Soon...', {
-      fontSize: '14px',
-      fontFamily: '"Press Start 2P", monospace',
-      color: '#9ca3af',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(8001);
-
-    const back = this.add.text(width / 2, height / 2 + 80, '[SPACE] Return', {
-      fontSize: '10px',
-      fontFamily: '"Press Start 2P", monospace',
-      color: '#fbbf24',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(8001);
-
-    this.input.keyboard?.once('keydown-SPACE', () => {
-      overlay.destroy();
-      text.destroy();
-      subtext.destroy();
-      back.destroy();
-    });
-  }
-
   shutdown(): void {
     eventBus.off('dialogue:action', this.onDialogueAction, this);
     eventBus.off('progression:gate-open', this.onGateOpen, this);
@@ -499,7 +624,72 @@ export class PrologueScene extends Phaser.Scene {
     this.interactionSystem?.destroy();
     this.npcBehavior?.destroy();
     this.hud?.destroy();
+    this.bit?.destroy();
+    this.glitch?.destroy();
     this.player?.destroy();
     for (const npc of this.npcs) npc.destroy();
+  }
+
+  // ─── Watcher System ─────────────────────────────────────────────────────────
+
+  private playWatcherFlyby(onComplete?: () => void): void {
+    const cam = this.cameras.main;
+    const worldView = cam.worldView;
+
+    // Fly left-to-right across the current camera view
+    const startX = worldView.left - 50;
+    const endX = worldView.right + 50;
+    const y = worldView.top + worldView.height * 0.25;
+
+    // Watcher: a rotating crystalline diamond — geometric, cold, scanning
+    const watcher = this.add.graphics().setDepth(8);
+    const drawWatcher = (): void => {
+      watcher.clear();
+      watcher.fillStyle(0x4c1d95, 0.55);
+      watcher.lineStyle(2, 0xa78bfa, 0.9);
+      // Diamond body
+      watcher.fillTriangle(-14, 0, 0, -18, 14, 0);
+      watcher.fillTriangle(-14, 0, 0, 18, 14, 0);
+      watcher.strokeTriangle(-14, 0, 0, -18, 14, 0);
+      watcher.strokeTriangle(-14, 0, 0, 18, 14, 0);
+      // Scan line
+      watcher.lineStyle(1, 0xc4b5fd, 0.4);
+      watcher.beginPath();
+      watcher.moveTo(0, -18);
+      watcher.lineTo(0, 18);
+      watcher.strokePath();
+    };
+    drawWatcher();
+    watcher.setPosition(startX, y);
+
+    // Slow rotation tween
+    this.tweens.add({
+      targets: watcher,
+      angle: 360,
+      duration: 2400,
+      repeat: -1,
+    });
+
+    // Emit Bit scared event as watcher enters view
+    eventBus.emit(GameEvents.WATCHER_NEARBY, { distance: 150 });
+    gameState.setBitMood(BitMood.SCARED);
+
+    // Fly across
+    this.tweens.add({
+      targets: watcher,
+      x: endX,
+      duration: 5000,
+      ease: 'Linear',
+      onComplete: () => {
+        watcher.destroy();
+        // Bit recovers 1.5s after the watcher leaves
+        this.time.delayedCall(1500, () => {
+          if (gameState.getBitMood() === BitMood.SCARED) {
+            gameState.setBitMood(BitMood.NEUTRAL);
+          }
+        });
+        onComplete?.();
+      },
+    });
   }
 }

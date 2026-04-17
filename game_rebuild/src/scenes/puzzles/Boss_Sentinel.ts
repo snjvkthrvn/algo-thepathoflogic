@@ -1,8 +1,9 @@
 /**
- * Boss: The Fractured Sentinel - 3-phase boss fight.
- * Phase 1: Pattern Echo (sequential processing)
- * Phase 2: Fragment Storm (key-value mapping + dodge)
- * Phase 3: Chaos Fusion (combined)
+ * Boss: The Fractured Sentinel
+ * Script-aligned three-phase boss:
+ * 1. Sequence test with slow orbs
+ * 2. Mapping test while the arena shifts
+ * 3. Combined test requiring both sequence memory and shard placement
  */
 
 import Phaser from 'phaser';
@@ -11,9 +12,15 @@ import { SCENE_KEYS, COLORS } from '../../config/constants';
 import { adjustBrightness } from '../../utils/colors';
 import { audioManager } from '../../core/AudioManager';
 import { shuffleArray } from '../../utils/math';
+import { FLOW_CONSOLE_CANON } from '../../prologue/flowConsoleCanon';
+import {
+  SENTINEL_SCRIPT_PHASES,
+  getNextSentinelPhase,
+  type SentinelScriptPhase,
+} from '../../prologue/sentinelScriptRules';
 
 type BossPhase = 'INTRO' | 'PHASE_1' | 'PHASE_2' | 'PHASE_3' | 'VICTORY';
-type PhaseState = 'SHOWING' | 'PLAYER_TURN' | 'WAITING' | 'COMPLETE';
+type PhaseState = 'SHOWING' | 'PLAYER_TURN' | 'WAITING';
 
 interface ArenaTile {
   container: Phaser.GameObjects.Container;
@@ -32,43 +39,49 @@ interface Socket {
   y: number;
 }
 
+interface BossShard {
+  color: number;
+  placed: boolean;
+  container: Phaser.GameObjects.Container;
+}
+
 export class Boss_Sentinel extends BasePuzzleScene {
-  // Arena
   private arenaTiles: ArenaTile[] = [];
   private sockets: Socket[] = [];
   private sentinelContainer!: Phaser.GameObjects.Container;
 
-  // Boss state
   private bossPhase: BossPhase = 'INTRO';
   private phaseState: PhaseState = 'WAITING';
+  private scriptPhase: SentinelScriptPhase = 'sequence_test';
 
-  // Phase 1
   private p1Sequences: number[][] = [];
-  private p1CurrentSeq: number = 0;
+  private p1CurrentSeq = 0;
   private p1PlayerInput: number[] = [];
-  private p1SequencesComplete: number = 0;
+  private p1SequencesComplete = 0;
 
-  // Phase 2
-  private p2Shards: { color: number; placed: boolean; container: Phaser.GameObjects.Container }[] = [];
-  private p2OrbTimer: Phaser.Time.TimerEvent | null = null;
-  private orbsHit: number = 0;
+  private p2Shards: BossShard[] = [];
+  private heldP2Shard: BossShard | null = null;
+  private hazardOrbTimer: Phaser.Time.TimerEvent | null = null;
 
-  // Phase 3
-  private p3Round: number = 0;
-  private p3MaxRounds: number = 4;
+  private p3Round = 0;
+  private p3MaxRounds = 3;
+  private combinedRoundSolved = false;
+  private combinedShardPlaced = false;
+  private combinedTargetSocketIndex: number | null = null;
 
-  // Scoring
   private phaseAttempts: number[] = [0, 0, 0];
-
-  // Phase display
   private phaseText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: SCENE_KEYS.BOSS_SENTINEL });
     this.puzzleId = 'boss_sentinel';
     this.puzzleName = 'The Fractured Sentinel';
-    this.puzzleDescription = 'Prove your mastery. Pattern and mapping, combined.';
+    this.puzzleDescription = 'Face the Sequence Test, the Mapping Test, and the Combined Test.';
     this.maxHints = 2;
+  }
+
+  protected shouldSkipConceptBridge(): boolean {
+    return true;
   }
 
   create(): void {
@@ -76,8 +89,7 @@ export class Boss_Sentinel extends BasePuzzleScene {
 
     const { width, height } = this.cameras.main;
 
-    // Phase indicator
-    this.phaseText = this.add.text(width / 2, 140, 'PHASE 1: PATTERN ECHO', {
+    this.phaseText = this.add.text(width / 2, 140, SENTINEL_SCRIPT_PHASES[0].title, {
       fontSize: '12px',
       fontFamily: '"Press Start 2P", monospace',
       color: '#ef4444',
@@ -88,16 +100,13 @@ export class Boss_Sentinel extends BasePuzzleScene {
     this.createArena(width / 2, height / 2 + 30);
     this.createSentinel(width / 2, height / 2 + 30);
 
-    // Intro sequence
-    this.bossPhase = 'INTRO';
-    this.showMessage('THE FRACTURED SENTINEL', COLORS.ERROR);
-
-    this.time.delayedCall(1500, () => {
-      this.showMessage('Phase 1: Pattern Echo', COLORS.CYAN_GLOW);
-      this.time.delayedCall(1000, () => {
-        this.bossPhase = 'PHASE_1';
-        this.startPhase1();
-      });
+    this.showMessage('GUARDIAN: ACTIVE', COLORS.ERROR);
+    this.time.delayedCall(1000, () => {
+      this.showMessage('Function: AUTHENTICATE', COLORS.CYAN_GLOW);
+    });
+    this.time.delayedCall(2200, () => {
+      this.bossPhase = 'PHASE_1';
+      this.startPhase1();
     });
   }
 
@@ -110,7 +119,6 @@ export class Boss_Sentinel extends BasePuzzleScene {
       const y = cy + Math.sin(angle) * radius;
 
       const container = this.add.container(x, y);
-
       const bg = this.add.rectangle(0, 0, 50, 50, COLORS.COSMIC_PURPLE, 0.8);
       bg.setStrokeStyle(2, COLORS.CYAN_GLOW, 0.4);
       bg.setInteractive({ useHandCursor: true });
@@ -124,31 +132,31 @@ export class Boss_Sentinel extends BasePuzzleScene {
       container.add(label);
 
       bg.on('pointerdown', () => this.onArenaTileClick(i));
-
       this.arenaTiles.push({ container, bg, index: i, x, y });
     }
 
-    // Create sockets (around inner ring)
     const socketRadius = 120;
-    const socketColors = [0xef4444, 0x3b82f6, 0x22c55e, 0xfbbf24, 0x8b5cf6, 0xf97316];
-
-    for (let i = 0; i < 6; i++) {
-      const angle = (Math.PI * 2 * i) / 6 - Math.PI / 2;
+    for (let i = 0; i < FLOW_CONSOLE_CANON.length; i++) {
+      const angle = (Math.PI * 2 * i) / FLOW_CONSOLE_CANON.length - Math.PI / 2;
       const x = cx + Math.cos(angle) * socketRadius;
       const y = cy + Math.sin(angle) * socketRadius;
+      const color = FLOW_CONSOLE_CANON[i].colorValue;
 
       const container = this.add.container(x, y);
       container.setVisible(false);
 
-      const socketBg = this.add.rectangle(0, 0, 36, 36, 0x1a1a2e, 0.8);
-      socketBg.setStrokeStyle(2, socketColors[i], 0.5);
+      const socketBg = this.add.rectangle(0, 0, 40, 40, 0x1a1a2e, 0.8);
+      socketBg.setStrokeStyle(2, color, 0.6);
       container.add(socketBg);
+
+      const socketCore = this.add.circle(0, 0, 8, color, 0.25);
+      container.add(socketCore);
 
       this.sockets.push({
         container,
         index: i,
         filled: false,
-        shardColor: socketColors[i],
+        shardColor: color,
         x,
         y,
       });
@@ -158,22 +166,16 @@ export class Boss_Sentinel extends BasePuzzleScene {
   private createSentinel(cx: number, cy: number): void {
     this.sentinelContainer = this.add.container(cx, cy);
 
-    // Sentinel body - geometric crystal form
     const body = this.add.graphics();
     body.fillStyle(COLORS.ERROR, 0.6);
     body.fillTriangle(0, -30, -25, 20, 25, 20);
     body.lineStyle(2, COLORS.ERROR, 0.8);
     body.strokeTriangle(0, -30, -25, 20, 25, 20);
 
-    // Eye
     const eye = this.add.circle(0, -5, 8, COLORS.ERROR, 0.9);
-
-    // Inner eye
     const pupil = this.add.circle(0, -5, 4, 0xffffff, 0.9);
-
     this.sentinelContainer.add([body, eye, pupil]);
 
-    // Floating animation
     this.tweens.add({
       targets: this.sentinelContainer,
       y: cy - 8,
@@ -184,16 +186,22 @@ export class Boss_Sentinel extends BasePuzzleScene {
     });
   }
 
-  // === PHASE 1: Pattern Echo ===
-  private startPhase1(): void {
-    this.phaseText.setText('PHASE 1: PATTERN ECHO');
-    this.p1SequencesComplete = 0;
+  private advanceScriptPhase(): void {
+    if (this.scriptPhase !== 'victory') {
+      this.scriptPhase = getNextSentinelPhase(this.scriptPhase);
+    }
+  }
 
-    // Generate 2 sequences of 6 tiles each
+  private startPhase1(): void {
+    this.scriptPhase = 'sequence_test';
+    this.phaseText.setText(SENTINEL_SCRIPT_PHASES[0].title);
+    this.p1CurrentSeq = 0;
+    this.p1SequencesComplete = 0;
     this.p1Sequences = [];
+
     for (let s = 0; s < 2; s++) {
       const seq: number[] = [];
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 5; i++) {
         let next: number;
         do {
           next = Math.floor(Math.random() * 8);
@@ -203,7 +211,22 @@ export class Boss_Sentinel extends BasePuzzleScene {
       this.p1Sequences.push(seq);
     }
 
+    this.startSlowOrbPattern();
     this.showP1Sequence();
+  }
+
+  private startSlowOrbPattern(): void {
+    this.hazardOrbTimer?.destroy();
+    this.hazardOrbTimer = this.time.addEvent({
+      delay: 2400,
+      loop: true,
+      callback: () => this.spawnOrb(4200),
+    });
+  }
+
+  private stopSlowOrbPattern(): void {
+    this.hazardOrbTimer?.destroy();
+    this.hazardOrbTimer = null;
   }
 
   private showP1Sequence(): void {
@@ -212,24 +235,26 @@ export class Boss_Sentinel extends BasePuzzleScene {
     this.p1PlayerInput = [];
 
     let delay = 500;
-    for (let i = 0; i < seq.length; i++) {
+    for (const tile of seq) {
       this.time.delayedCall(delay, () => {
-        this.flashArenaTile(seq[i], COLORS.CYAN_GLOW, 600);
-        audioManager.playTone(300 + seq[i] * 60, 150, 'sine');
+        this.flashArenaTile(tile, COLORS.CYAN_GLOW, 550);
+        audioManager.playTone(300 + tile * 60, 140, 'sine');
       });
-      delay += 900;
+      delay += 800;
     }
 
-    this.time.delayedCall(delay + 300, () => {
+    this.time.delayedCall(delay + 200, () => {
       this.phaseState = 'PLAYER_TURN';
-      this.showMessage('Repeat the pattern!', COLORS.GOLD_ACCENT);
+      this.showMessage('Repeat the pattern while the orbs drift.', COLORS.GOLD_ACCENT);
     });
   }
 
   private onArenaTileClick(index: number): void {
-    if (this.bossPhase === 'PHASE_1' && this.phaseState === 'PLAYER_TURN') {
+    if (this.phaseState !== 'PLAYER_TURN') return;
+
+    if (this.bossPhase === 'PHASE_1') {
       this.handleP1Input(index);
-    } else if (this.bossPhase === 'PHASE_3' && this.phaseState === 'PLAYER_TURN') {
+    } else if (this.bossPhase === 'PHASE_3') {
       this.handleP3PatternInput(index);
     }
   }
@@ -238,201 +263,207 @@ export class Boss_Sentinel extends BasePuzzleScene {
     const seq = this.p1Sequences[this.p1CurrentSeq];
     const expected = seq[this.p1PlayerInput.length];
 
-    this.flashArenaTile(index, index === expected ? COLORS.SUCCESS : COLORS.ERROR, 300);
+    this.flashArenaTile(index, index === expected ? COLORS.SUCCESS : COLORS.ERROR, 220);
 
     if (index === expected) {
       audioManager.playTone(300 + index * 60, 100, 'sine');
       this.p1PlayerInput.push(index);
 
       if (this.p1PlayerInput.length >= seq.length) {
-        // Sequence complete!
         this.p1SequencesComplete++;
         audioManager.playCorrectTone();
 
-        if (this.p1SequencesComplete >= 2) {
-          this.showMessage('Phase 1 Complete!', COLORS.SUCCESS);
-          this.time.delayedCall(1500, () => this.transitionToPhase2());
+        if (this.p1SequencesComplete >= this.p1Sequences.length) {
+          this.showMessage('Sequence accepted.', COLORS.SUCCESS);
+          this.time.delayedCall(1000, () => this.transitionToPhase2());
         } else {
           this.p1CurrentSeq++;
-          this.showMessage('Sequence complete! Next...', COLORS.SUCCESS);
-          this.time.delayedCall(1000, () => this.showP1Sequence());
+          this.showMessage('One more sequence.', COLORS.SUCCESS);
+          this.time.delayedCall(800, () => this.showP1Sequence());
         }
       }
     } else {
-      // Wrong!
       this.phaseAttempts[0]++;
       this.attempts++;
       audioManager.playWrongTone();
-      this.cameras.main.shake(200, 0.005);
-      this.showMessage('Wrong! Watch again...', COLORS.ERROR);
-
-      this.time.delayedCall(1000, () => {
-        this.p1PlayerInput = [];
-        this.showP1Sequence();
-      });
+      this.cameras.main.shake(180, 0.004);
+      this.showMessage('Watch the order again.', COLORS.ERROR);
+      this.time.delayedCall(800, () => this.showP1Sequence());
     }
   }
 
-  // === PHASE 2: Fragment Storm ===
   private transitionToPhase2(): void {
+    this.stopSlowOrbPattern();
     this.bossPhase = 'PHASE_2';
-    this.phaseText.setText('PHASE 2: FRAGMENT STORM');
+    this.advanceScriptPhase();
+    this.phaseText.setText(SENTINEL_SCRIPT_PHASES[1].title);
+    this.resetSockets(true);
+    this.startArenaShiftTween();
+    this.startMappingTrial();
+  }
 
-    // Show sockets
-    for (const socket of this.sockets) {
-      socket.container.setVisible(true);
-      socket.container.setAlpha(0);
+  private startArenaShiftTween(): void {
+    this.tweens.killTweensOf(this.sockets.map((socket) => socket.container));
+    this.sockets.forEach((socket, index) => {
       this.tweens.add({
         targets: socket.container,
-        alpha: 1,
-        duration: 500,
+        x: socket.x + (index - 1) * 18,
+        y: socket.y + (index % 2 === 0 ? -10 : 10),
+        duration: 1300,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
       });
+    });
+  }
+
+  private stopArenaShiftTween(): void {
+    this.tweens.killTweensOf(this.sockets.map((socket) => socket.container));
+    for (const socket of this.sockets) {
+      socket.container.setPosition(socket.x, socket.y);
     }
+  }
 
-    // Create shards
+  private startMappingTrial(): void {
+    this.cleanupShards();
+
     const { height } = this.cameras.main;
-    const shardColors = this.sockets.map((s) => s.shardColor);
-    const shuffled = shuffleArray(shardColors);
+    const shardColors = shuffleArray(FLOW_CONSOLE_CANON.map((entry) => entry.colorValue));
 
-    for (let i = 0; i < 6; i++) {
-      const x = 100 + (i % 3) * 100;
-      const y = height - 120 + Math.floor(i / 3) * 50;
-
-      const container = this.add.container(x, y);
-      const shard = this.add.circle(0, 0, 12, shuffled[i], 0.9);
-      shard.setStrokeStyle(2, adjustBrightness(shuffled[i], 0.6));
-      shard.setInteractive({ useHandCursor: true });
-      container.add(shard);
-
-      const shardData = { color: shuffled[i], placed: false, container };
+    for (let i = 0; i < shardColors.length; i++) {
+      const x = 160 + i * 140;
+      const y = height - 120;
+      const container = this.createShardContainer(x, y, shardColors[i]);
+      const shardData: BossShard = { color: shardColors[i], placed: false, container };
       this.p2Shards.push(shardData);
 
-      shard.on('pointerdown', () => this.pickupP2Shard(shardData));
+      const shardCircle = container.getAt(0) as Phaser.GameObjects.Arc;
+      shardCircle.setInteractive({ useHandCursor: true });
+      shardCircle.on('pointerdown', () => this.pickupP2Shard(shardData));
     }
 
-    // Start orb spawning
-    this.p2OrbTimer = this.time.addEvent({
-      delay: 3000,
-      loop: true,
-      callback: () => this.spawnOrb(),
-    });
-
-    this.showMessage('Place shards in matching sockets!', COLORS.CYAN_GLOW);
     this.phaseState = 'PLAYER_TURN';
+    this.showMessage('Match the shards while the arena shifts.', COLORS.CYAN_GLOW);
 
-    // Make sockets clickable
     for (const socket of this.sockets) {
       const bg = socket.container.getAt(0) as Phaser.GameObjects.Rectangle;
+      bg.removeAllListeners('pointerdown');
       bg.setInteractive({ useHandCursor: true });
       bg.on('pointerdown', () => this.tryPlaceP2Shard(socket));
     }
   }
 
-  private heldP2Shard: typeof this.p2Shards[0] | null = null;
+  private createShardContainer(x: number, y: number, color: number): Phaser.GameObjects.Container {
+    const container = this.add.container(x, y);
+    const shard = this.add.circle(0, 0, 14, color, 0.9);
+    shard.setStrokeStyle(2, adjustBrightness(color, 0.6));
+    container.add(shard);
 
-  private pickupP2Shard(shard: typeof this.p2Shards[0]): void {
+    const trail = this.add.graphics();
+    trail.lineStyle(2, 0xffffff, 0.2);
+    trail.beginPath();
+    trail.moveTo(-8, 10);
+    trail.lineTo(0, -12);
+    trail.lineTo(8, 10);
+    trail.strokePath();
+    container.add(trail);
+
+    return container;
+  }
+
+  private pickupP2Shard(shard: BossShard): void {
     if (shard.placed) return;
+
+    if (this.heldP2Shard && this.heldP2Shard !== shard) {
+      this.returnHeldShard(this.heldP2Shard);
+    }
+
     this.heldP2Shard = shard;
-    shard.container.setScale(1.3);
-    shard.container.setAlpha(0.7);
+    shard.container.setScale(1.2);
+    shard.container.setAlpha(0.75);
   }
 
   private tryPlaceP2Shard(socket: Socket): void {
     if (!this.heldP2Shard || socket.filled) return;
 
+    if (this.bossPhase === 'PHASE_3') {
+      this.tryPlaceCombinedShard(socket);
+      return;
+    }
+
     if (this.heldP2Shard.color === socket.shardColor) {
-      // Correct!
       socket.filled = true;
       this.heldP2Shard.placed = true;
 
       this.tweens.add({
         targets: this.heldP2Shard.container,
-        x: socket.x,
-        y: socket.y,
+        x: socket.container.x,
+        y: socket.container.y,
         scale: 0.8,
         alpha: 1,
-        duration: 300,
+        duration: 250,
       });
 
       audioManager.playCorrectTone();
       this.heldP2Shard = null;
 
-      // Check if all placed
-      if (this.p2Shards.every((s) => s.placed)) {
-        this.p2OrbTimer?.destroy();
-        this.showMessage('Phase 2 Complete!', COLORS.SUCCESS);
-        this.time.delayedCall(1500, () => this.transitionToPhase3());
+      if (this.p2Shards.every((shard) => shard.placed)) {
+        this.showMessage('Mapping accepted.', COLORS.SUCCESS);
+        this.time.delayedCall(1000, () => this.transitionToPhase3());
       }
     } else {
-      // Wrong!
       this.phaseAttempts[1]++;
       this.attempts++;
       audioManager.playWrongTone();
-
-      const shard = this.heldP2Shard;
-      this.heldP2Shard = null;
-
-      // Return shard
-      this.tweens.add({
-        targets: shard.container,
-        scale: 1,
-        alpha: 1,
-        duration: 200,
-      });
-
       this.cameras.main.shake(150, 0.003);
+      this.returnHeldShard(this.heldP2Shard);
+      this.heldP2Shard = null;
     }
   }
 
-  private spawnOrb(): void {
-    if (this.bossPhase !== 'PHASE_2' && this.bossPhase !== 'PHASE_3') return;
-
-    const { width } = this.cameras.main;
-    const side = Math.random() > 0.5 ? 0 : 1;
-    const x = side === 0 ? 60 : width - 60;
-    const y = 200 + Math.random() * 300;
-
-    const orb = this.add.circle(x, y, 8, COLORS.ERROR, 0.8);
-    orb.setStrokeStyle(2, 0xff6666);
-
-    this.tweens.add({
-      targets: orb,
-      x: side === 0 ? width - 60 : 60,
-      duration: 3000,
-      onComplete: () => orb.destroy(),
-    });
-  }
-
-  // === PHASE 3: Chaos Fusion ===
   private transitionToPhase3(): void {
+    this.stopArenaShiftTween();
+    this.cleanupShards();
+    this.resetSockets(true);
     this.bossPhase = 'PHASE_3';
+    this.advanceScriptPhase();
+    this.phaseText.setText(SENTINEL_SCRIPT_PHASES[2].title);
     this.p3Round = 0;
-    this.phaseText.setText('PHASE 3: CHAOS FUSION');
-
-    // Clean up Phase 2
-    for (const shard of this.p2Shards) {
-      shard.container.destroy();
-    }
-    this.p2Shards = [];
-
-    // Reset sockets
-    for (const socket of this.sockets) {
-      socket.filled = false;
-    }
-
-    this.showMessage('Final Phase: Chaos Fusion!', COLORS.ERROR);
-    this.time.delayedCall(1500, () => this.startP3Round());
+    this.showMessage('Hold both lessons together.', COLORS.ERROR);
+    this.time.delayedCall(1200, () => this.startCombinedTrial());
   }
 
-  private startP3Round(): void {
+  private startCombinedTrial(): void {
     if (this.p3Round >= this.p3MaxRounds) {
       this.victory();
       return;
     }
 
-    this.phaseText.setText(`PHASE 3: ROUND ${this.p3Round + 1}/${this.p3MaxRounds}`);
+    this.cleanupShards();
+    this.resetSockets(true);
+    this.combinedRoundSolved = false;
+    this.combinedShardPlaced = false;
+    this.heldP2Shard = null;
+    this.combinedTargetSocketIndex = this.p3Round % this.sockets.length;
 
-    // Generate a short pattern (3 tiles)
+    const targetSocket = this.sockets[this.combinedTargetSocketIndex];
+    this.highlightSocket(targetSocket);
+
+    const { height } = this.cameras.main;
+    const shardContainer = this.createShardContainer(160, height - 120, targetSocket.shardColor);
+    const shardData: BossShard = { color: targetSocket.shardColor, placed: false, container: shardContainer };
+    this.p2Shards = [shardData];
+
+    const shardCircle = shardContainer.getAt(0) as Phaser.GameObjects.Arc;
+    shardCircle.setInteractive({ useHandCursor: true });
+    shardCircle.on('pointerdown', () => this.pickupP2Shard(shardData));
+
+    this.showCombinedPattern();
+  }
+
+  private showCombinedPattern(): void {
+    this.phaseText.setText(`${SENTINEL_SCRIPT_PHASES[2].title} ${this.p3Round + 1}/${this.p3MaxRounds}`);
+
     const pattern: number[] = [];
     for (let i = 0; i < 3; i++) {
       let next: number;
@@ -442,23 +473,22 @@ export class Boss_Sentinel extends BasePuzzleScene {
       pattern.push(next);
     }
 
-    // Show pattern
-    this.phaseState = 'SHOWING';
-    this.p1PlayerInput = [];
     this.p1Sequences = [pattern];
-    this.p1CurrentSeq = 0;
+    this.p1PlayerInput = [];
+    this.phaseState = 'SHOWING';
 
-    let delay = 500;
+    let delay = 400;
     for (const tile of pattern) {
       this.time.delayedCall(delay, () => {
-        this.flashArenaTile(tile, COLORS.CYAN_GLOW, 500);
-        audioManager.playTone(300 + tile * 60, 100, 'sine');
+        this.flashArenaTile(tile, COLORS.CYAN_GLOW, 450);
+        audioManager.playTone(340 + tile * 55, 100, 'sine');
       });
-      delay += 700;
+      delay += 650;
     }
 
     this.time.delayedCall(delay + 200, () => {
       this.phaseState = 'PLAYER_TURN';
+      this.showMessage('Repeat the pattern and place the shard.', COLORS.GOLD_ACCENT);
     });
   }
 
@@ -469,27 +499,144 @@ export class Boss_Sentinel extends BasePuzzleScene {
     this.flashArenaTile(index, index === expected ? COLORS.SUCCESS : COLORS.ERROR, 200);
 
     if (index === expected) {
-      audioManager.playTone(300 + index * 60, 80, 'sine');
+      audioManager.playTone(320 + index * 60, 80, 'sine');
       this.p1PlayerInput.push(index);
 
       if (this.p1PlayerInput.length >= seq.length) {
+        this.combinedRoundSolved = true;
         audioManager.playCorrectTone();
-        this.p3Round++;
-
-        if (this.p3Round >= this.p3MaxRounds) {
-          this.time.delayedCall(800, () => this.victory());
-        } else {
-          this.time.delayedCall(800, () => this.startP3Round());
+        this.finishCombinedRoundIfReady();
+        if (!this.combinedShardPlaced) {
+          this.showMessage('Pattern held. Place the shard.', COLORS.SUCCESS);
         }
       }
     } else {
       this.phaseAttempts[2]++;
       this.attempts++;
       audioManager.playWrongTone();
-      this.cameras.main.shake(200, 0.005);
-
-      this.time.delayedCall(1000, () => this.startP3Round());
+      this.cameras.main.shake(180, 0.004);
+      this.showMessage('Both skills slipped. Resetting round.', COLORS.ERROR);
+      this.time.delayedCall(900, () => this.startCombinedTrial());
     }
+  }
+
+  private tryPlaceCombinedShard(socket: Socket): void {
+    if (!this.heldP2Shard || socket.filled || this.combinedTargetSocketIndex === null) return;
+
+    const isCorrectSocket =
+      socket.index === this.combinedTargetSocketIndex &&
+      this.heldP2Shard.color === socket.shardColor;
+
+    if (!isCorrectSocket) {
+      this.phaseAttempts[2]++;
+      this.attempts++;
+      audioManager.playWrongTone();
+      this.cameras.main.shake(180, 0.004);
+      this.showMessage('Wrong receptacle. Start the round again.', COLORS.ERROR);
+      this.time.delayedCall(700, () => this.startCombinedTrial());
+      return;
+    }
+
+    socket.filled = true;
+    this.heldP2Shard.placed = true;
+    this.tweens.add({
+      targets: this.heldP2Shard.container,
+      x: socket.container.x,
+      y: socket.container.y,
+      scale: 0.8,
+      alpha: 1,
+      duration: 250,
+    });
+
+    audioManager.playCorrectTone();
+    this.heldP2Shard = null;
+    this.markCombinedShardPlaced();
+  }
+
+  private markCombinedShardPlaced(): void {
+    if (this.phaseState !== 'PLAYER_TURN') return;
+    this.combinedShardPlaced = true;
+    this.finishCombinedRoundIfReady();
+    if (!this.combinedRoundSolved) {
+      this.showMessage('Shard placed. Finish the pattern.', COLORS.CYAN_GLOW);
+    }
+  }
+
+  private finishCombinedRoundIfReady(): void {
+    if (!this.combinedRoundSolved || !this.combinedShardPlaced) return;
+
+    this.p3Round += 1;
+    if (this.p3Round >= this.p3MaxRounds) {
+      this.victory();
+    } else {
+      this.showMessage('Combined round accepted.', COLORS.SUCCESS);
+      this.time.delayedCall(900, () => this.startCombinedTrial());
+    }
+  }
+
+  private highlightSocket(socket: Socket): void {
+    for (const current of this.sockets) {
+      current.filled = false;
+      current.container.setVisible(true);
+      current.container.setAlpha(current.index === socket.index ? 1 : 0.7);
+      const bg = current.container.getAt(0) as Phaser.GameObjects.Rectangle;
+      bg.removeAllListeners('pointerdown');
+      bg.setInteractive({ useHandCursor: true });
+      bg.on('pointerdown', () => this.tryPlaceP2Shard(current));
+    }
+
+    this.tweens.add({
+      targets: socket.container,
+      scale: 1.08,
+      duration: 350,
+      yoyo: true,
+      repeat: 3,
+    });
+  }
+
+  private resetSockets(visible: boolean): void {
+    for (const socket of this.sockets) {
+      socket.filled = false;
+      socket.container.setVisible(visible);
+      socket.container.setAlpha(1);
+      socket.container.setScale(1);
+      socket.container.setPosition(socket.x, socket.y);
+      const bg = socket.container.getAt(0) as Phaser.GameObjects.Rectangle;
+      bg.removeAllListeners('pointerdown');
+    }
+  }
+
+  private cleanupShards(): void {
+    for (const shard of this.p2Shards) {
+      shard.container.destroy();
+    }
+    this.p2Shards = [];
+    this.heldP2Shard = null;
+  }
+
+  private returnHeldShard(shard: BossShard): void {
+    shard.container.setScale(1);
+    shard.container.setAlpha(1);
+  }
+
+  private spawnOrb(duration: number): void {
+    if (this.bossPhase !== 'PHASE_1') return;
+
+    const { width } = this.cameras.main;
+    const side = Math.random() > 0.5 ? 0 : 1;
+    const x = side === 0 ? 60 : width - 60;
+    const y = 220 + Math.random() * 260;
+
+    const orb = this.add.circle(x, y, 8, COLORS.ERROR, 0.75);
+    orb.setStrokeStyle(2, 0xff6666);
+
+    this.tweens.add({
+      targets: orb,
+      x: side === 0 ? width - 60 : 60,
+      duration,
+      ease: 'Linear',
+      onComplete: () => orb.destroy(),
+    });
   }
 
   private flashArenaTile(index: number, color: number, duration: number): void {
@@ -499,7 +646,7 @@ export class Boss_Sentinel extends BasePuzzleScene {
     tile.bg.setFillStyle(color, 1);
     this.tweens.add({
       targets: tile.container,
-      scale: 1.15,
+      scale: 1.12,
       duration: duration / 2,
       yoyo: true,
       onComplete: () => {
@@ -508,68 +655,47 @@ export class Boss_Sentinel extends BasePuzzleScene {
     });
   }
 
-  // === VICTORY ===
   private victory(): void {
     this.bossPhase = 'VICTORY';
-    this.p2OrbTimer?.destroy();
-    this.phaseText.setText('SENTINEL DEFEATED');
+    this.stopSlowOrbPattern();
+    this.stopArenaShiftTween();
+    this.cleanupShards();
+    this.phaseText.setText(SENTINEL_SCRIPT_PHASES[3].title);
 
-    // Victory animation
-    // 1. Sentinel freezes
     this.tweens.killTweensOf(this.sentinelContainer);
-
-    // 2. Arena tiles illuminate
-    let delay = 0;
-    for (const tile of this.arenaTiles) {
-      this.time.delayedCall(delay, () => {
-        this.flashArenaTile(tile.index, COLORS.CYAN_GLOW, 500);
-      });
-      delay += 200;
-    }
-
-    // 3. Sentinel speaks
-    this.time.delayedCall(2000, () => {
-      this.showMessage('Authorization... accepted.', COLORS.CYAN_GLOW);
+    this.tweens.add({
+      targets: this.sentinelContainer,
+      alpha: 0,
+      scale: 1.8,
+      duration: 1200,
     });
 
-    // 4. Sentinel dissolves
-    this.time.delayedCall(3500, () => {
-      this.tweens.add({
-        targets: this.sentinelContainer,
-        alpha: 0,
-        scale: 2,
-        duration: 1000,
-      });
+    this.showMessage('Authentication: VALID', COLORS.CYAN_GLOW);
+    this.time.delayedCall(900, () => {
+      this.showMessage('Passage granted.', COLORS.GOLD_ACCENT);
     });
-
-    // 5. Complete
-    this.time.delayedCall(5000, () => {
-      let stars = 1;
-      const totalAttempts = this.phaseAttempts.reduce((a, b) => a + b, 0);
-
-      if (totalAttempts <= 2 && this.orbsHit === 0) {
-        stars = 3;
-      } else if (totalAttempts <= 5 && this.orbsHit <= 3) {
-        stars = 2;
-      }
-
-      this.onPuzzleComplete(stars);
-    });
+    this.time.delayedCall(2200, () => this.onPuzzleComplete(3));
   }
 
   protected displayHint(hintNumber: number): void {
     switch (hintNumber) {
       case 1:
-        this.showMessage('Watch carefully. The sequence repeats the same tiles.', COLORS.GOLD_ACCENT);
+        if (this.bossPhase === 'PHASE_1') {
+          this.showMessage('Bit would hover by each tile in order. Follow the whole pattern.', COLORS.GOLD_ACCENT);
+        } else if (this.bossPhase === 'PHASE_2') {
+          this.showMessage('Match each shard color to the glowing socket of the same color.', COLORS.GOLD_ACCENT);
+        } else if (this.bossPhase === 'PHASE_3') {
+          this.showMessage('Complete the pattern and the shard placement in the same round.', COLORS.GOLD_ACCENT);
+        }
         break;
       case 2:
-        if (this.bossPhase === 'PHASE_1' && this.phaseState === 'PLAYER_TURN') {
-          const seq = this.p1Sequences[this.p1CurrentSeq];
-          if (seq.length > 0) {
-            this.flashArenaTile(seq[0], COLORS.GOLD_ACCENT, 1000);
-          }
+        if (this.bossPhase === 'PHASE_1' && this.p1Sequences[this.p1CurrentSeq]?.length) {
+          this.flashArenaTile(this.p1Sequences[this.p1CurrentSeq][0], COLORS.GOLD_ACCENT, 1000);
         }
-        this.showMessage('The first tile in the sequence is highlighted.', COLORS.GOLD_ACCENT);
+        if (this.bossPhase === 'PHASE_3' && this.combinedTargetSocketIndex !== null) {
+          this.highlightSocket(this.sockets[this.combinedTargetSocketIndex]);
+        }
+        this.showMessage('The next safe anchor is highlighted.', COLORS.GOLD_ACCENT);
         break;
     }
   }

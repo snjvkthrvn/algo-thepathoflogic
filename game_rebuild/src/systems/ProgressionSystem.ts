@@ -1,13 +1,13 @@
 /**
- * ProgressionSystem - Unlock gates, completion tracking.
+ * ProgressionSystem - Unlock gates and Bit evolution.
  */
 
 import { gameState } from '../core/GameStateManager';
 import { eventBus, GameEvents } from '../core/EventBus';
+import { BitStage } from '../data/types';
 
-export class ProgressionSystem {
+class ProgressionSystemClass {
   constructor() {
-    // Listen for puzzle completions to update progression
     eventBus.on(GameEvents.PUZZLE_COMPLETE, (...args: unknown[]) => {
       const data = args[0] as { puzzleId: string };
       this.onPuzzleComplete(data.puzzleId);
@@ -16,11 +16,11 @@ export class ProgressionSystem {
 
   private onPuzzleComplete(puzzleId: string): void {
     gameState.setFlag(`puzzle_${puzzleId}_complete`, true);
+
     this.checkGates();
   }
 
   private checkGates(): void {
-    // Boss gate: opens when both P0-1 and P0-2 are complete
     const p01Done = gameState.getFlag('puzzle_p0_1_complete');
     const p02Done = gameState.getFlag('puzzle_p0_2_complete');
 
@@ -29,11 +29,16 @@ export class ProgressionSystem {
       eventBus.emit('progression:gate-open', { gateId: 'boss_gate' });
     }
 
-    // Gateway: opens when boss is defeated
     const bossDefeated = gameState.getFlag('puzzle_boss_sentinel_complete');
     if (bossDefeated && !gameState.getFlag('gateway_open')) {
       gameState.setFlag('gateway_open', true);
       eventBus.emit('progression:gate-open', { gateId: 'array_plains_gateway' });
+
+      // Bit evolves: SPARK -> BYTE after the prologue boss
+      if (gameState.getBitStage() === BitStage.SPARK) {
+        gameState.setBitStage(BitStage.BYTE);
+        gameState.collectShard('prologue_logic_shard');
+      }
     }
   }
 
@@ -53,3 +58,6 @@ export class ProgressionSystem {
     return { puzzles: completed, total: 3 };
   }
 }
+
+/** Singleton — registers EventBus listeners once for the entire session. */
+export const progressionSystem = new ProgressionSystemClass();

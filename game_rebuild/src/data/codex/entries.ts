@@ -8,7 +8,7 @@ import { AlgorithmType, Difficulty } from '../types';
 export const CODEX_ENTRIES: CodexEntry[] = [
   {
     id: 'sequential_processing',
-    algorithmName: 'Sequential Processing',
+    algorithmName: 'Sequences — The Foundation of Everything',
     category: AlgorithmType.SEQUENTIAL_REASONING,
     unlockedBy: 'p0_1',
     difficulty: Difficulty.VERY_EASY,
@@ -18,9 +18,10 @@ export const CODEX_ENTRIES: CodexEntry[] = [
         type: 'what_you_felt',
         title: 'What You Felt',
         content: [
-          'The runes glowed in a pattern -- first one, then another, then another. You watched, memorized, and repeated.',
-          'The satisfaction of getting the sequence right. The frustration of missing one step and starting over.',
-          'This is what it feels like to process information in order -- the most fundamental operation in computing.',
+          'The runes glowed one at a time. First, second, third. You watched. You remembered. You walked that exact path.',
+          'Your Bit hovered near each tile in order — helping you hold the sequence in your head.',
+          'When you finished, something clicked. Not just "I did it" — but "I understand why order matters."',
+          'That click? That\'s what sequential processing feels like from the inside.',
         ],
       },
       {
@@ -56,13 +57,13 @@ export const CODEX_ENTRIES: CodexEntry[] = [
       {
         type: 'unlocked_ability',
         title: 'Unlocked Ability',
-        content: 'Pattern Sight -- You can now perceive the sequential order underlying the world\'s processes. Sequences that once seemed random now reveal their logic.',
+        content: 'Pattern Sight — You can now perceive the sequential order underlying the world\'s processes. Sequences that once seemed random now reveal their logic. Your Bit has grown — watch it arrange its particles into a line.',
       },
     ],
   },
   {
     id: 'key_value_mapping',
-    algorithmName: 'Key-Value Mapping',
+    algorithmName: 'Mapping — Every Key Has a Value',
     category: AlgorithmType.SPATIAL_MAPPING,
     unlockedBy: 'p0_2',
     difficulty: Difficulty.EASY,
@@ -72,9 +73,10 @@ export const CODEX_ENTRIES: CodexEntry[] = [
         type: 'what_you_felt',
         title: 'What You Felt',
         content: [
-          'Each shard was unique. Each console had a specific need. The match was immediate once you saw the connection.',
-          'No searching, no trial and error (if you read the patterns carefully). Key goes to value. Done.',
-          'This directness, this instant connection -- that\'s the power of mapping.',
+          'Three shards. Three consoles. Triangle with double stripes. Diamond with a single stripe. Circle with triple stripes.',
+          'You looked at the shard. You looked at the consoles. You walked straight to the right one.',
+          'Meanwhile, someone nearby tried every slot until something fit. It took them much, much longer.',
+          'You felt the difference between searching and knowing. That\'s what mapping gives you.',
         ],
       },
       {
@@ -110,7 +112,7 @@ export const CODEX_ENTRIES: CodexEntry[] = [
       {
         type: 'unlocked_ability',
         title: 'Unlocked Ability',
-        content: 'Flow Sense -- You can now perceive the connections between keys and values in the world. Locked doors reveal what key they need. Broken mappings become visible.',
+        content: 'Flow Sense — You can now perceive the connections between keys and values in the world. Locked doors reveal what key they need. Broken mappings become visible. When both shards are yours, the gate opens.',
       },
     ],
   },
