@@ -86,9 +86,8 @@ export class BootScene extends Phaser.Scene {
       this.load.audio(asset.key, asset.path);
     }
 
-    // If no assets to load, still show the boot screen briefly
+    // Keep the boot flow stable even when the asset manifest is empty.
     if (SPRITE_ASSETS.length + IMAGE_ASSETS.length + TILEMAP_ASSETS.length + AUDIO_ASSETS.length === 0) {
-      // Simulate loading for visual effect
       barFill.fillStyle(COLORS.CYAN_GLOW, 1);
       barFill.fillRoundedRect(barX + 2, barY + 2, barWidth - 4, barHeight - 4, 3);
       loadingText.setText('Systems Online');

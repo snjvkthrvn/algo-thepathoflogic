@@ -1,6 +1,6 @@
 /**
- * Asset manifest - maps keys to file paths.
- * All game assets are registered here for BootScene preloading.
+ * Asset manifest for optional authored assets.
+ * Empty arrays are valid while the playable build still relies on procedural fallbacks.
  */
 
 export interface AssetEntry {
@@ -11,20 +11,17 @@ export interface AssetEntry {
 }
 
 export const SPRITE_ASSETS: AssetEntry[] = [
-  // Player sprites will be generated procedurally for now
-  // { key: 'player-idle', path: 'assets/sprites/player/idle.png', frameWidth: 32, frameHeight: 48 },
+  // Register authored sprite sheets here when they replace procedural fallbacks.
 ];
 
 export const IMAGE_ASSETS: AssetEntry[] = [
-  // { key: 'prologue-tileset', path: 'assets/tilesets/prologue/tileset.png' },
+  // Register authored images and tilesets here when available.
 ];
 
 export const TILEMAP_ASSETS: AssetEntry[] = [
-  // { key: 'prologue-map', path: 'assets/maps/prologue.json' },
+  // Register authored tilemaps here when the procedural region layout is replaced.
 ];
 
 export const AUDIO_ASSETS: AssetEntry[] = [
-  // { key: 'prologue-bgm', path: 'assets/audio/music/prologue.mp3' },
-  // { key: 'sfx-correct', path: 'assets/audio/sfx/correct.wav' },
-  // { key: 'sfx-wrong', path: 'assets/audio/sfx/wrong.wav' },
+  // Register authored music and SFX here when they replace procedural audio fallback.
 ];
