@@ -4,7 +4,13 @@
  */
 
 import Phaser from 'phaser';
-import { COLORS, SCENE_KEYS, VOID_RESPAWN_CHECK_INTERVAL } from '../../config/constants';
+import {
+  COLORS,
+  SCENE_KEYS,
+  VOID_RESPAWN_CHECK_INTERVAL,
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+} from '../../config/constants';
 import { Player } from '../../entities/Player';
 import { BitCompanion } from '../../entities/BitCompanion';
 import { GlitchRival } from '../../entities/GlitchRival';
@@ -13,6 +19,7 @@ import { InteractableObject } from '../../entities/InteractableObject';
 import { DialogueSystem } from '../../systems/DialogueSystem';
 import { InteractionSystem, type InteractableEntry } from '../../systems/InteractionSystem';
 import { NPCBehaviorSystem } from '../../systems/NPCBehaviorSystem';
+import { PlatformBuilder, type PlatformHandle } from '../../systems/PlatformBuilder';
 import { progressionSystem } from '../../systems/ProgressionSystem';
 import { HUDManager } from '../../systems/HUDManager';
 import { TransitionManager } from '../../core/TransitionManager';
@@ -27,13 +34,12 @@ import {
 } from '../../data/dialogue/prologue_dialogue';
 import { prologueGlitchIntroDialogue } from '../../data/dialogue/glitch_dialogue';
 import { PROLOGUE_NPCS } from '../../data/npcs/prologue_npcs';
-import { PROLOGUE_PLATFORMS, PROLOGUE_CONFIG } from '../../data/regions/prologue';
+import { PROLOGUE_CLUSTERS, PROLOGUE_CONFIG } from '../../data/regions/prologue';
 import {
   createPrologueStoryFlags,
   getPendingPrologueBeat,
   shouldTriggerWatcherAtPosition,
 } from '../../prologue/prologueScriptState';
-import { isOnWalkablePlatform, shouldRespawnFromVoid } from '../../prologue/platformBounds';
 
 export class PrologueScene extends Phaser.Scene {
   private player!: Player;
@@ -49,6 +55,7 @@ export class PrologueScene extends Phaser.Scene {
   private moteEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
   private bossGate: InteractableObject | null = null;
   private gateway: InteractableObject | null = null;
+  private platformHandle: PlatformHandle | null = null;
   private safePositionTimer!: Phaser.Time.TimerEvent;
   private onDialogueAction!: (...args: unknown[]) => void;
   private onGateOpen!: (...args: unknown[]) => void;
@@ -69,13 +76,12 @@ export class PrologueScene extends Phaser.Scene {
     audioManager.setScene(this);
     audioManager.playMusic('prologue-bgm');
 
-    // Set world bounds larger than camera for scrolling
-    this.physics.world.setBounds(0, 0, 1400, 720);
+    this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
     // === ATMOSPHERE ===
-    this.createStarfield(1400, 720);
+    this.createStarfield(WORLD_WIDTH, WORLD_HEIGHT);
     this.createMotes();
-    this.createNebulaOverlay(1400, 720);
+    this.createNebulaOverlay(WORLD_WIDTH, WORLD_HEIGHT);
 
     // === PLATFORMS ===
     // Platforms are walkable ground in this top-down game.
@@ -155,7 +161,7 @@ export class PrologueScene extends Phaser.Scene {
     eventBus.on('progression:gate-open', this.onGateOpen, this);
 
     // === CAMERA ===
-    this.cameras.main.setBounds(0, 0, 1400, 720);
+    this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.startFollow(this.player.sprite, true, 0.08, 0.08);
 
     // === VOID RESPAWN ===
@@ -347,39 +353,8 @@ export class PrologueScene extends Phaser.Scene {
   }
 
   private createPlatforms(): void {
-    for (const plat of PROLOGUE_PLATFORMS) {
-      // Platform graphics
-      const graphics = this.add.graphics();
-
-      // Platform shadow
-      graphics.fillStyle(0x000000, 0.3);
-      graphics.fillRoundedRect(plat.x + 4, plat.y + 4, plat.width, plat.height, 6);
-
-      // Platform body
-      graphics.fillStyle(COLORS.COSMIC_PURPLE, 0.9);
-      graphics.fillRoundedRect(plat.x, plat.y, plat.width, plat.height, 6);
-
-      // Platform edge glow
-      graphics.lineStyle(2, COLORS.CYAN_GLOW, 0.4);
-      graphics.strokeRoundedRect(plat.x, plat.y, plat.width, plat.height, 6);
-
-      // Inner detail
-      graphics.lineStyle(1, COLORS.CYAN_GLOW, 0.15);
-      graphics.strokeRoundedRect(plat.x + 4, plat.y + 4, plat.width - 8, plat.height - 8, 4);
-
-    }
-
-    // Animate platform glow
-    this.tweens.add({
-      targets: { value: 0 },
-      value: 1,
-      duration: 3000,
-      yoyo: true,
-      repeat: -1,
-      onUpdate: () => {
-        // Platform glow pulsing handled via the edge glow already
-      },
-    });
+    const builder = new PlatformBuilder(this);
+    this.platformHandle = builder.buildAll(PROLOGUE_CLUSTERS);
   }
 
   private createNPCs(): void {
@@ -480,7 +455,7 @@ export class PrologueScene extends Phaser.Scene {
     moteGraphics.destroy();
 
     const emitter = this.add.particles(0, 0, 'mote', {
-      x: { min: 0, max: 1400 },
+      x: { min: 0, max: WORLD_WIDTH },
       y: 750,
       lifespan: 6000,
       speedY: { min: -20, max: -40 },
@@ -512,15 +487,37 @@ export class PrologueScene extends Phaser.Scene {
     if (this.isRespawning) return;
 
     const pos = this.player.getPosition();
+    let onPlatform = false;
 
-    if (isOnWalkablePlatform(pos, PROLOGUE_PLATFORMS)) {
-      this.player.updateSafePosition();
-      return;
+    for (const cluster of PROLOGUE_CLUSTERS) {
+      const f = cluster.footprint;
+      if (
+        pos.x >= f.x &&
+        pos.x <= f.x + f.width &&
+        pos.y >= f.y - 10 &&
+        pos.y <= f.y + f.height + 10
+      ) {
+        onPlatform = true;
+        this.player.updateSafePosition();
+        break;
+      }
     }
 
-    if (shouldRespawnFromVoid(pos, PROLOGUE_PLATFORMS)) {
-      this.respawnPlayer();
+    if (onPlatform) return;
+
+    let nearPlatform = false;
+    for (const cluster of PROLOGUE_CLUSTERS) {
+      const f = cluster.footprint;
+      const cx = f.x + f.width / 2;
+      const cy = f.y + f.height / 2;
+      const dist = Math.sqrt((pos.x - cx) ** 2 + (pos.y - cy) ** 2);
+      if (dist < Math.max(f.width, f.height)) {
+        nearPlatform = true;
+        break;
+      }
     }
+
+    if (!nearPlatform) this.respawnPlayer();
   }
 
   private respawnPlayer(): void {
@@ -620,6 +617,7 @@ export class PrologueScene extends Phaser.Scene {
     eventBus.off('progression:gate-open', this.onGateOpen, this);
     this.safePositionTimer?.destroy();
     this.moteEmitter?.destroy();
+    this.platformHandle?.destroy();
     this.dialogueSystem?.destroy();
     this.interactionSystem?.destroy();
     this.npcBehavior?.destroy();
