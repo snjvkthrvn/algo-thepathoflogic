@@ -12,6 +12,12 @@ export interface InteractableConfig {
   y: number;
   prompt?: string;
   locked?: boolean;
+  spriteKey?: string;
+  spriteImageKey?: string;
+  frameByState?: Record<string, number>;
+  imageByState?: Record<string, string>;
+  initialState?: string;
+  scale?: number;
   onInteract?: () => void;
 }
 
@@ -21,6 +27,7 @@ export class InteractableObject {
   config: InteractableConfig;
   private scene: Phaser.Scene;
   private glowGraphics: Phaser.GameObjects.Graphics;
+  private visual: Phaser.GameObjects.Sprite | Phaser.GameObjects.Image | null = null;
 
   constructor(scene: Phaser.Scene, config: InteractableConfig) {
     this.scene = scene;
@@ -28,20 +35,33 @@ export class InteractableObject {
 
     this.sprite = scene.add.container(config.x, config.y);
 
-    // Draw based on type
-    switch (config.type) {
-      case 'gate':
-        this.drawGate(config.locked);
-        break;
-      case 'portal':
-        this.drawPortal();
-        break;
-      case 'sign':
-        this.drawSign();
-        break;
-      case 'chest':
-        this.drawChest();
-        break;
+    if (config.spriteKey) {
+      this.visual = scene.add.sprite(
+        0,
+        0,
+        config.spriteKey,
+        config.frameByState?.[config.initialState ?? 'locked'] ?? 0,
+      ).setScale(config.scale ?? 1);
+      this.sprite.add(this.visual);
+    } else if (config.spriteImageKey) {
+      this.visual = scene.add.image(0, 0, config.spriteImageKey).setScale(config.scale ?? 1);
+      this.sprite.add(this.visual);
+    } else {
+      // Draw based on type
+      switch (config.type) {
+        case 'gate':
+          this.drawGate(config.locked);
+          break;
+        case 'portal':
+          this.drawPortal();
+          break;
+        case 'sign':
+          this.drawSign();
+          break;
+        case 'chest':
+          this.drawChest();
+          break;
+      }
     }
 
     // Glow
@@ -124,6 +144,11 @@ export class InteractableObject {
 
   setLocked(locked: boolean): void {
     this.config.locked = locked;
+    if (this.config.frameByState || this.config.imageByState) {
+      this.setVisualState(locked ? 'locked' : 'unlocked');
+      return;
+    }
+
     // Redraw gate if type is gate
     if (this.config.type === 'gate') {
       this.sprite.removeAll(true);
@@ -134,6 +159,18 @@ export class InteractableObject {
       this.glowGraphics.fillStyle(COLORS.CYAN_GLOW, 0.1);
       this.glowGraphics.fillCircle(0, 0, 36);
       this.sprite.addAt(this.glowGraphics, 0);
+    }
+  }
+
+  setVisualState(state: string): void {
+    const frame = this.config.frameByState?.[state];
+    if (frame !== undefined && this.visual instanceof Phaser.GameObjects.Sprite) {
+      this.visual.setFrame(frame);
+    }
+
+    const imageKey = this.config.imageByState?.[state];
+    if (imageKey && this.visual instanceof Phaser.GameObjects.Image) {
+      this.visual.setTexture(imageKey);
     }
   }
 

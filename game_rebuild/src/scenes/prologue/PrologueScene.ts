@@ -151,10 +151,12 @@ export class PrologueScene extends Phaser.Scene {
       const data = args[0] as { gateId: string };
       if (data.gateId === 'boss_gate' && this.bossGate) {
         this.bossGate.setLocked(false);
+        this.bossGate.setVisualState('unlocked');
         this.showGateOpenEffect(this.bossGate);
       }
       if (data.gateId === 'array_plains_gateway' && this.gateway) {
         this.gateway.setLocked(false);
+        this.gateway.setVisualState('unlocked');
         this.showGateOpenEffect(this.gateway);
       }
     });
@@ -388,6 +390,15 @@ export class PrologueScene extends Phaser.Scene {
       y: PROLOGUE_CONFIG.exitPoints[0].position.y,
       prompt: bossGateOpen ? '[SPACE] Enter' : 'Sealed',
       locked: !bossGateOpen,
+      spriteKey: 'prologue-gates',
+      frameByState: {
+        locked: 4,
+        one_shard: 5,
+        unlocked: 6,
+        defeated: 7,
+      },
+      initialState: bossGateOpen ? 'unlocked' : 'locked',
+      scale: 0.16,
       onInteract: () => {
         if (progressionSystem.isBossGateOpen()) {
           TransitionManager.swirl(this, SCENE_KEYS.BOSS_SENTINEL, {
@@ -409,6 +420,13 @@ export class PrologueScene extends Phaser.Scene {
       y: PROLOGUE_CONFIG.exitPoints[1].position.y,
       prompt: gatewayOpen ? '[SPACE] Enter Gateway' : 'Sealed',
       locked: !gatewayOpen,
+      spriteImageKey: gatewayOpen ? 'prologue-portal-active_0' : 'prologue-portal-locked',
+      imageByState: {
+        locked: 'prologue-portal-locked',
+        unlocked: 'prologue-portal-active_0',
+      },
+      initialState: gatewayOpen ? 'unlocked' : 'locked',
+      scale: 0.25,
       onInteract: () => {
         if (progressionSystem.isGatewayOpen()) {
           this.showMessage('Array Plains awaits.', COLORS.GOLD_ACCENT);
