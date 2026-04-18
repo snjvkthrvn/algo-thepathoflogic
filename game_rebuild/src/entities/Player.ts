@@ -1,56 +1,37 @@
 /**
  * Player - Movement, animation, interaction state.
- * Uses procedural graphics until sprite assets are available.
  */
 
 import Phaser from 'phaser';
-import { PLAYER_SPEED, COLORS } from '../config/constants';
+import { PLAYER_SPEED } from '../config/constants';
 import { PlayerState } from '../data/types';
 
+const PLAYER_SCALE = 0.18;
+
 export class Player {
-  sprite: Phaser.GameObjects.Container;
+  sprite: Phaser.GameObjects.Sprite;
   body: Phaser.Physics.Arcade.Body;
   state: PlayerState = PlayerState.IDLE;
   lastSafePosition: { x: number; y: number };
   private scene: Phaser.Scene;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: { W: Phaser.Input.Keyboard.Key; A: Phaser.Input.Keyboard.Key; S: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
-  private playerBody: Phaser.GameObjects.Rectangle;
-  private playerHead: Phaser.GameObjects.Rectangle;
   private facingDirection: 'down' | 'up' | 'left' | 'right' = 'down';
-  private bobTween: Phaser.Tweens.Tween | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.scene = scene;
     this.lastSafePosition = { x, y };
 
-    // Create procedural player sprite
-    this.sprite = scene.add.container(x, y);
-
-    // Shadow
-    const shadow = scene.add.ellipse(0, 18, 24, 10, 0x000000, 0.3);
-    this.sprite.add(shadow);
-
-    // Body
-    this.playerBody = scene.add.rectangle(0, 4, 20, 24, COLORS.CYAN_GLOW);
-    this.playerBody.setStrokeStyle(2, 0x0891b2);
-    this.sprite.add(this.playerBody);
-
-    // Head
-    this.playerHead = scene.add.rectangle(0, -12, 16, 16, COLORS.CYAN_GLOW);
-    this.playerHead.setStrokeStyle(2, 0x0891b2);
-    this.sprite.add(this.playerHead);
-
-    // Eyes
-    const eyeL = scene.add.rectangle(-3, -13, 3, 3, 0xffffff);
-    const eyeR = scene.add.rectangle(3, -13, 3, 3, 0xffffff);
-    this.sprite.add([eyeL, eyeR]);
+    this.sprite = scene.add.sprite(x, y, 'prologue-mc', 0)
+      .setDepth(5)
+      .setScale(PLAYER_SCALE);
+    this.createAnimations();
+    this.sprite.anims.play('mc-idle-down');
 
     // Enable physics
-    scene.physics.world.enable(this.sprite);
+    scene.physics.add.existing(this.sprite);
     this.body = this.sprite.body as Phaser.Physics.Arcade.Body;
-    this.body.setSize(20, 16);
-    this.body.setOffset(-10, 8);
+    this.body.setSize(24, 18);
     this.body.setCollideWorldBounds(true);
 
     // Setup input
@@ -68,6 +49,7 @@ export class Player {
   update(): void {
     if (this.state === PlayerState.FROZEN || this.state === PlayerState.INTERACTING) {
       this.body.setVelocity(0, 0);
+      this.playMovementAnimation(0, 0);
       return;
     }
 
@@ -99,25 +81,20 @@ export class Player {
     }
 
     this.body.setVelocity(vx, vy);
+    this.playMovementAnimation(vx, vy);
 
     // Update state
     if (vx !== 0 || vy !== 0) {
-      if (this.state !== PlayerState.WALKING) {
-        this.state = PlayerState.WALKING;
-        this.startWalkAnimation();
-      }
+      this.state = PlayerState.WALKING;
     } else {
-      if (this.state !== PlayerState.IDLE) {
-        this.state = PlayerState.IDLE;
-        this.stopWalkAnimation();
-      }
+      this.state = PlayerState.IDLE;
     }
   }
 
   freeze(): void {
     this.state = PlayerState.FROZEN;
     this.body.setVelocity(0, 0);
-    this.stopWalkAnimation();
+    this.playMovementAnimation(0, 0);
   }
 
   unfreeze(): void {
@@ -127,9 +104,7 @@ export class Player {
   setInteracting(interacting: boolean): void {
     this.state = interacting ? PlayerState.INTERACTING : PlayerState.IDLE;
     this.body.setVelocity(0, 0);
-    if (interacting) {
-      this.stopWalkAnimation();
-    }
+    this.playMovementAnimation(0, 0);
   }
 
   getPosition(): { x: number; y: number } {
@@ -149,28 +124,51 @@ export class Player {
     return this.facingDirection;
   }
 
-  private startWalkAnimation(): void {
-    this.stopWalkAnimation();
-    this.bobTween = this.scene.tweens.add({
-      targets: [this.playerBody, this.playerHead],
-      y: '-=2',
-      duration: 150,
-      yoyo: true,
+  private createAnimations(): void {
+    if (this.scene.anims.exists('mc-idle-down')) return;
+
+    this.scene.anims.create({
+      key: 'mc-idle-down',
+      frames: this.scene.anims.generateFrameNumbers('prologue-mc', { start: 0, end: 0 }),
+      frameRate: 1,
+    });
+    this.scene.anims.create({
+      key: 'mc-walk-down',
+      frames: this.scene.anims.generateFrameNumbers('prologue-mc', { start: 0, end: 5 }),
+      frameRate: 8,
+      repeat: -1,
+    });
+    this.scene.anims.create({
+      key: 'mc-walk-up',
+      frames: this.scene.anims.generateFrameNumbers('prologue-mc', { start: 6, end: 11 }),
+      frameRate: 8,
+      repeat: -1,
+    });
+    this.scene.anims.create({
+      key: 'mc-walk-side',
+      frames: this.scene.anims.generateFrameNumbers('prologue-mc', { start: 12, end: 17 }),
+      frameRate: 8,
       repeat: -1,
     });
   }
 
-  private stopWalkAnimation(): void {
-    if (this.bobTween) {
-      this.bobTween.stop();
-      this.bobTween = null;
-      this.playerBody.setPosition(0, 4);
-      this.playerHead.setPosition(0, -12);
+  private playMovementAnimation(vx: number, vy: number): void {
+    if (vx === 0 && vy === 0) {
+      this.sprite.anims.play('mc-idle-down', true);
+      return;
+    }
+
+    if (Math.abs(vx) > Math.abs(vy)) {
+      this.sprite.anims.play('mc-walk-side', true);
+      this.sprite.setFlipX(vx < 0);
+    } else if (vy < 0) {
+      this.sprite.anims.play('mc-walk-up', true);
+    } else {
+      this.sprite.anims.play('mc-walk-down', true);
     }
   }
 
   destroy(): void {
-    this.stopWalkAnimation();
     this.sprite.destroy();
   }
 }

@@ -262,7 +262,9 @@ export interface NPCConfig {
   id: string;
   name: string;
   type: NPCType;
-  spriteKey: string;
+  spriteKey?: string;
+  idleFrames?: number[];
+  talkFrames?: number[];
   defaultPosition: Position;
   dialogue: DialogueTree;
   postPuzzleDialogue?: DialogueTree;

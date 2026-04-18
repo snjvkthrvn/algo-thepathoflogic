@@ -43,3 +43,8 @@ game_rebuild/npm-cache/
 
 # Local git worktrees
 .worktrees/
+
+# Playwright artifacts
+game_rebuild/tests/playwright/__snapshots__/
+game_rebuild/test-results/
+game_rebuild/playwright-report/
