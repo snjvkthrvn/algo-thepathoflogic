@@ -6,6 +6,12 @@ import Phaser from 'phaser';
 import { COLORS } from '../config/constants';
 import type { NPCConfig } from '../data/types';
 
+const NPC_SPRITE_SCALES: Record<string, number> = {
+  'prologue-node': 0.2,
+  'prologue-rune-keeper': 0.12,
+  'prologue-console-keeper': 0.12,
+};
+
 export class NPC {
   sprite: Phaser.GameObjects.Container;
   body: Phaser.Physics.Arcade.Body;
@@ -26,34 +32,51 @@ export class NPC {
     const shadow = scene.add.ellipse(0, 20, 28, 12, 0x000000, 0.3);
     this.sprite.add(shadow);
 
-    // Body color based on NPC type
-    const bodyColor = this.getNPCColor();
+    if (config.spriteKey) {
+      const visual = scene.add.sprite(0, 0, config.spriteKey, config.idleFrames?.[0] ?? 0)
+        .setScale(NPC_SPRITE_SCALES[config.spriteKey] ?? 0.14);
+      this.sprite.add(visual);
 
-    // Body
-    const body = scene.add.rectangle(0, 4, 22, 26, bodyColor);
-    body.setStrokeStyle(2, 0x333366);
-    this.sprite.add(body);
+      const animKey = `${config.id}-idle`;
+      if (!scene.anims.exists(animKey) && config.idleFrames && config.idleFrames.length > 0) {
+        scene.anims.create({
+          key: animKey,
+          frames: config.idleFrames.map((frame) => ({ key: config.spriteKey!, frame })),
+          frameRate: 4,
+          repeat: -1,
+        });
+      }
+      if (scene.anims.exists(animKey)) {
+        visual.anims.play(animKey);
+      }
+    } else {
+      // Body color based on NPC type
+      const bodyColor = this.getNPCColor();
 
-    // Head
-    const head = scene.add.rectangle(0, -14, 18, 18, bodyColor);
-    head.setStrokeStyle(2, 0x333366);
-    this.sprite.add(head);
+      // Body
+      const body = scene.add.rectangle(0, 4, 22, 26, bodyColor);
+      body.setStrokeStyle(2, 0x333366);
+      this.sprite.add(body);
 
-    // Eyes
-    const eyeL = scene.add.rectangle(-3, -15, 3, 4, 0xffffff);
-    const eyeR = scene.add.rectangle(3, -15, 3, 4, 0xffffff);
-    this.sprite.add([eyeL, eyeR]);
+      // Head
+      const head = scene.add.rectangle(0, -14, 18, 18, bodyColor);
+      head.setStrokeStyle(2, 0x333366);
+      this.sprite.add(head);
 
-    // Distinguishing feature based on type
-    if (config.type === 'mentor') {
-      // Hat
-      const hat = scene.add.rectangle(0, -26, 22, 6, COLORS.GOLD_ACCENT);
-      hat.setStrokeStyle(1, 0x996600);
-      this.sprite.add(hat);
-    } else if (config.type === 'guide') {
-      // Cape accent
-      const cape = scene.add.triangle(0, 12, -14, 0, 14, 0, 0, 14, COLORS.PURPLE_CRYSTAL, 0.6);
-      this.sprite.add(cape);
+      // Eyes
+      const eyeL = scene.add.rectangle(-3, -15, 3, 4, 0xffffff);
+      const eyeR = scene.add.rectangle(3, -15, 3, 4, 0xffffff);
+      this.sprite.add([eyeL, eyeR]);
+
+      // Distinguishing feature based on type
+      if (config.type === 'mentor') {
+        const hat = scene.add.rectangle(0, -26, 22, 6, COLORS.GOLD_ACCENT);
+        hat.setStrokeStyle(1, 0x996600);
+        this.sprite.add(hat);
+      } else if (config.type === 'guide') {
+        const cape = scene.add.triangle(0, 12, -14, 0, 14, 0, 0, 14, COLORS.PURPLE_CRYSTAL, 0.6);
+        this.sprite.add(cape);
+      }
     }
 
     // Glow effect (initially invisible)
