@@ -465,21 +465,15 @@ export class PrologueScene extends Phaser.Scene {
   }
 
   private createMotes(): void {
-    // Ascending cyan particles
-    const moteGraphics = this.add.graphics();
-    moteGraphics.fillStyle(COLORS.CYAN_GLOW, 1);
-    moteGraphics.fillCircle(2, 2, 2);
-    moteGraphics.generateTexture('mote', 4, 4);
-    moteGraphics.destroy();
-
-    const emitter = this.add.particles(0, 0, 'mote', {
+    const emitter = this.add.particles(0, 0, 'prologue-atmosphere', {
+      frame: [0, 1, 2],
       x: { min: 0, max: WORLD_WIDTH },
-      y: 750,
+      y: 740,
       lifespan: 6000,
       speedY: { min: -20, max: -40 },
       speedX: { min: -5, max: 5 },
       alpha: { start: 0.4, end: 0 },
-      scale: { start: 0.5, end: 1.5 },
+      scale: { start: 0.15, end: 0.45 },
       quantity: 1,
       frequency: 200,
     });
