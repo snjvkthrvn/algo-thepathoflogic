@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { gameState } from './GameStateManager';
 import { eventBus, GameEvents } from './EventBus';
+import { BitStage, BitMood } from '../data/types';
 
 describe('GameStateManager', () => {
   beforeEach(() => {
@@ -11,8 +12,8 @@ describe('GameStateManager', () => {
   describe('default state', () => {
     it('should have default player position', () => {
       const state = gameState.getState();
-      expect(state.player.x).toBe(400);
-      expect(state.player.y).toBe(500);
+      expect(state.player.x).toBe(320);
+      expect(state.player.y).toBe(400);
       expect(state.player.region).toBe('prologue');
     });
 
@@ -167,12 +168,15 @@ describe('GameStateManager', () => {
       gameState.resetState();
 
       expect(gameState.getFlag('test')).toBe(false);
-      expect(gameState.getState().player.x).toBe(400);
+      expect(gameState.getState().player.x).toBe(320);
     });
 
     it('should load state from saved data', () => {
       const savedState = {
         player: { x: 200, y: 300, region: 'array_plains' },
+        companion: { stage: BitStage.BYTE, mood: BitMood.EXCITED },
+        rival: { encountered: true, encounterStage: 1 },
+        shardsCollected: ['shard_p0_1'],
         puzzleResults: { p0_1: { stars: 3, time: 30, attempts: 0, hintsUsed: 0 } },
         codexEntries: ['sequential_processing'],
         npcStates: { rune_keeper: 'post_puzzle' },

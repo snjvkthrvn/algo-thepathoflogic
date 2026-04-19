@@ -5,7 +5,9 @@
 
 import { eventBus, GameEvents } from './EventBus';
 import type { GameState, PuzzleResult, GameSettings } from '../data/types';
+import { BitStage, BitMood } from '../data/types';
 import { REGIONS } from '../config/constants';
+import { PROLOGUE_CONFIG } from '../data/regions/prologue';
 
 const DEFAULT_SETTINGS: GameSettings = {
   musicVolume: 0.7,
@@ -15,7 +17,14 @@ const DEFAULT_SETTINGS: GameSettings = {
 
 function createDefaultState(): GameState {
   return {
-    player: { x: 400, y: 500, region: REGIONS.PROLOGUE },
+    player: {
+      x: PROLOGUE_CONFIG.spawnPoint.x,
+      y: PROLOGUE_CONFIG.spawnPoint.y,
+      region: REGIONS.PROLOGUE,
+    },
+    companion: { stage: BitStage.SPARK, mood: BitMood.NEUTRAL },
+    rival: { encountered: false, encounterStage: 0 },
+    shardsCollected: [],
     puzzleResults: {},
     codexEntries: [],
     npcStates: {},
@@ -126,6 +135,61 @@ class GameStateManagerClass {
   resetState(): void {
     this.state = createDefaultState();
     this.playTimeStart = Date.now();
+  }
+
+  // Companion (Bit)
+  setBitStage(stage: BitStage): void {
+    const from = this.state.companion.stage;
+    this.state.companion.stage = stage;
+    eventBus.emit(GameEvents.BIT_EVOLVE, { from, to: stage });
+    eventBus.emit(GameEvents.STATE_CHANGED, { key: 'companion.stage', value: stage });
+  }
+
+  getBitStage(): BitStage {
+    return this.state.companion.stage;
+  }
+
+  setBitMood(mood: BitMood): void {
+    this.state.companion.mood = mood;
+    eventBus.emit(GameEvents.BIT_MOOD_CHANGE, { mood });
+  }
+
+  getBitMood(): BitMood {
+    return this.state.companion.mood;
+  }
+
+  // Shards
+  collectShard(shardId: string): void {
+    if (!this.state.shardsCollected.includes(shardId)) {
+      this.state.shardsCollected.push(shardId);
+      eventBus.emit(GameEvents.SHARD_COLLECTED, {
+        shardId,
+        totalCollected: this.state.shardsCollected.length,
+      });
+      eventBus.emit(GameEvents.STATE_CHANGED, { key: 'shardsCollected', value: this.state.shardsCollected });
+    }
+  }
+
+  getShardsCollected(): string[] {
+    return this.state.shardsCollected;
+  }
+
+  isShardCollected(shardId: string): boolean {
+    return this.state.shardsCollected.includes(shardId);
+  }
+
+  // Rival (Glitch)
+  advanceGlitchEncounter(): void {
+    if (!this.state.rival.encountered) {
+      this.state.rival.encountered = true;
+    }
+    this.state.rival.encounterStage += 1;
+    eventBus.emit(GameEvents.GLITCH_ENCOUNTER, { stage: this.state.rival.encounterStage });
+    eventBus.emit(GameEvents.STATE_CHANGED, { key: 'rival.encounterStage', value: this.state.rival.encounterStage });
+  }
+
+  getGlitchEncounterStage(): number {
+    return this.state.rival.encounterStage;
   }
 
   getSerializableState(): GameState {

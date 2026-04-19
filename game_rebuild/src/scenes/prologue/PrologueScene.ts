@@ -4,38 +4,51 @@
  */
 
 import Phaser from 'phaser';
-import { COLORS, SCENE_KEYS, VOID_RESPAWN_CHECK_INTERVAL } from '../../config/constants';
+import {
+  COLORS,
+  SCENE_KEYS,
+  VOID_RESPAWN_CHECK_INTERVAL,
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+} from '../../config/constants';
 import { Player } from '../../entities/Player';
+import { BitCompanion } from '../../entities/BitCompanion';
+import { GlitchRival } from '../../entities/GlitchRival';
 import { NPC } from '../../entities/NPC';
 import { InteractableObject } from '../../entities/InteractableObject';
 import { DialogueSystem } from '../../systems/DialogueSystem';
 import { InteractionSystem, type InteractableEntry } from '../../systems/InteractionSystem';
 import { NPCBehaviorSystem } from '../../systems/NPCBehaviorSystem';
-import { ProgressionSystem } from '../../systems/ProgressionSystem';
+import { progressionSystem } from '../../systems/ProgressionSystem';
 import { HUDManager } from '../../systems/HUDManager';
 import { TransitionManager } from '../../core/TransitionManager';
 import { audioManager } from '../../core/AudioManager';
 import { gameState } from '../../core/GameStateManager';
-import { eventBus } from '../../core/EventBus';
+import { eventBus, GameEvents } from '../../core/EventBus';
+import { BitMood } from '../../data/types';
 import { PROLOGUE_NPCS } from '../../data/npcs/prologue_npcs';
-import { PROLOGUE_PLATFORMS, PROLOGUE_CONFIG } from '../../data/regions/prologue';
+import { PROLOGUE_CLUSTERS, PROLOGUE_CONFIG } from '../../data/regions/prologue';
+import { PlatformBuilder, type PlatformHandle } from '../../systems/PlatformBuilder';
 
 export class PrologueScene extends Phaser.Scene {
   private player!: Player;
+  private bit!: BitCompanion;
+  private glitch!: GlitchRival;
   private npcs: NPC[] = [];
   private dialogueSystem!: DialogueSystem;
   private interactionSystem!: InteractionSystem;
   private npcBehavior!: NPCBehaviorSystem;
-  private progression!: ProgressionSystem;
   private hud!: HUDManager;
   private starGraphics!: Phaser.GameObjects.Graphics;
   private stars: { x: number; y: number; alpha: number; speed: number; size: number }[] = [];
   private moteEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
   private bossGate: InteractableObject | null = null;
   private gateway: InteractableObject | null = null;
+  private platformHandle: PlatformHandle | null = null;
   private safePositionTimer!: Phaser.Time.TimerEvent;
   private onDialogueAction!: (...args: unknown[]) => void;
   private onGateOpen!: (...args: unknown[]) => void;
+  private onGlitchSpawn!: (...args: unknown[]) => void;
 
   constructor() {
     super({ key: SCENE_KEYS.PROLOGUE });
@@ -51,13 +64,13 @@ export class PrologueScene extends Phaser.Scene {
     audioManager.setScene(this);
     audioManager.playMusic('prologue-bgm');
 
-    // Set world bounds larger than camera for scrolling
-    this.physics.world.setBounds(0, 0, 1400, 720);
+    // Set world bounds larger than camera for horizontal scrolling.
+    this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
     // === ATMOSPHERE ===
-    this.createStarfield(1400, 720);
+    this.createStarfield(WORLD_WIDTH, WORLD_HEIGHT);
     this.createMotes();
-    this.createNebulaOverlay(1400, 720);
+    this.createNebulaOverlay(WORLD_WIDTH, WORLD_HEIGHT);
 
     // === PLATFORMS ===
     // Platforms are walkable ground in this top-down game.
@@ -68,6 +81,10 @@ export class PrologueScene extends Phaser.Scene {
     const state = gameState.getState();
     this.player = new Player(this, state.player.x, state.player.y);
 
+    // === COMPANIONS ===
+    this.bit = new BitCompanion(this, state.player.x, state.player.y);
+    this.glitch = new GlitchRival(this);
+
     // === NPCS ===
     this.npcBehavior = new NPCBehaviorSystem();
     this.createNPCs();
@@ -77,7 +94,7 @@ export class PrologueScene extends Phaser.Scene {
     // === SYSTEMS ===
     this.dialogueSystem = new DialogueSystem(this);
     this.interactionSystem = new InteractionSystem(this, this.player);
-    this.progression = new ProgressionSystem();
+    // progressionSystem is a singleton — already active, no instantiation needed
     this.hud = new HUDManager(this);
 
     // Register NPCs with systems
@@ -123,17 +140,30 @@ export class PrologueScene extends Phaser.Scene {
       const data = args[0] as { gateId: string };
       if (data.gateId === 'boss_gate' && this.bossGate) {
         this.bossGate.setLocked(false);
+        this.bossGate.setVisualState('unlocked');
         this.showGateOpenEffect(this.bossGate);
       }
       if (data.gateId === 'array_plains_gateway' && this.gateway) {
         this.gateway.setLocked(false);
+        this.gateway.setImageTexture('prologue-portal-active_0');
         this.showGateOpenEffect(this.gateway);
       }
     });
     eventBus.on('progression:gate-open', this.onGateOpen, this);
 
+    // Listen for Glitch encounter triggers from ProgressionSystem
+    this.onGlitchSpawn = (() => {
+      // Spawn Glitch to the right of the player's current position
+      const pos = this.player.getPosition();
+      this.glitch.triggerEncounter(pos.x + 180, pos.y);
+    });
+    eventBus.on('progression:glitch-spawn', this.onGlitchSpawn, this);
+
+    // === WATCHER SYSTEM ===
+    this.scheduleWatcherFlyby(Phaser.Math.Between(25000, 45000));
+
     // === CAMERA ===
-    this.cameras.main.setBounds(0, 0, 1400, 720);
+    this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.startFollow(this.player.sprite, true, 0.08, 0.08);
 
     // === VOID RESPAWN ===
@@ -161,6 +191,10 @@ export class PrologueScene extends Phaser.Scene {
       this.player.update();
     }
 
+    // Update companion — Bit always follows, even during dialogue
+    const pos = this.player.getPosition();
+    this.bit.update(pos.x, pos.y);
+
     // Update systems
     this.interactionSystem.update();
     this.npcBehavior.update();
@@ -169,44 +203,12 @@ export class PrologueScene extends Phaser.Scene {
     this.updateStarfield();
 
     // Save player position
-    const pos = this.player.getPosition();
     gameState.setPlayerPosition(pos.x, pos.y);
   }
 
   private createPlatforms(): void {
-    for (const plat of PROLOGUE_PLATFORMS) {
-      // Platform graphics
-      const graphics = this.add.graphics();
-
-      // Platform shadow
-      graphics.fillStyle(0x000000, 0.3);
-      graphics.fillRoundedRect(plat.x + 4, plat.y + 4, plat.width, plat.height, 6);
-
-      // Platform body
-      graphics.fillStyle(COLORS.COSMIC_PURPLE, 0.9);
-      graphics.fillRoundedRect(plat.x, plat.y, plat.width, plat.height, 6);
-
-      // Platform edge glow
-      graphics.lineStyle(2, COLORS.CYAN_GLOW, 0.4);
-      graphics.strokeRoundedRect(plat.x, plat.y, plat.width, plat.height, 6);
-
-      // Inner detail
-      graphics.lineStyle(1, COLORS.CYAN_GLOW, 0.15);
-      graphics.strokeRoundedRect(plat.x + 4, plat.y + 4, plat.width - 8, plat.height - 8, 4);
-
-    }
-
-    // Animate platform glow
-    this.tweens.add({
-      targets: { value: 0 },
-      value: 1,
-      duration: 3000,
-      yoyo: true,
-      repeat: -1,
-      onUpdate: () => {
-        // Platform glow pulsing handled via the edge glow already
-      },
-    });
+    const builder = new PlatformBuilder(this);
+    this.platformHandle = builder.buildAll(PROLOGUE_CLUSTERS);
   }
 
   private createNPCs(): void {
@@ -240,8 +242,16 @@ export class PrologueScene extends Phaser.Scene {
       y: PROLOGUE_CONFIG.exitPoints[0].position.y,
       prompt: bossGateOpen ? '[SPACE] Enter' : 'Sealed',
       locked: !bossGateOpen,
+      spriteKey: 'prologue-gates',
+      frameByState: {
+        locked: 4,
+        one_shard: 5,
+        unlocked: 6,
+        defeated: 7,
+      },
+      initialState: bossGateOpen ? 'unlocked' : 'locked',
       onInteract: () => {
-        if (this.progression.isBossGateOpen()) {
+        if (progressionSystem.isBossGateOpen()) {
           TransitionManager.swirl(this, SCENE_KEYS.BOSS_SENTINEL, {
             returnScene: SCENE_KEYS.PROLOGUE,
           });
@@ -261,8 +271,9 @@ export class PrologueScene extends Phaser.Scene {
       y: PROLOGUE_CONFIG.exitPoints[1].position.y,
       prompt: gatewayOpen ? '[SPACE] Enter Gateway' : 'Sealed',
       locked: !gatewayOpen,
+      spriteImageKey: gatewayOpen ? 'prologue-portal-active_0' : 'prologue-portal-locked',
       onInteract: () => {
-        if (this.progression.isGatewayOpen()) {
+        if (progressionSystem.isGatewayOpen()) {
           this.showComingSoon();
         } else {
           this.showLockedMessage('Defeat the Sentinel to unlock the gateway.');
@@ -299,21 +310,15 @@ export class PrologueScene extends Phaser.Scene {
   }
 
   private createMotes(): void {
-    // Ascending cyan particles
-    const moteGraphics = this.add.graphics();
-    moteGraphics.fillStyle(COLORS.CYAN_GLOW, 1);
-    moteGraphics.fillCircle(2, 2, 2);
-    moteGraphics.generateTexture('mote', 4, 4);
-    moteGraphics.destroy();
-
-    const emitter = this.add.particles(0, 0, 'mote', {
-      x: { min: 0, max: 1400 },
+    const emitter = this.add.particles(0, 0, 'prologue-atmosphere', {
+      frame: [0, 1, 2],
+      x: { min: 0, max: WORLD_WIDTH },
       y: 750,
       lifespan: 6000,
       speedY: { min: -20, max: -40 },
       speedX: { min: -5, max: 5 },
       alpha: { start: 0.4, end: 0 },
-      scale: { start: 0.5, end: 1.5 },
+      scale: { start: 0.15, end: 0.45 },
       quantity: 1,
       frequency: 200,
     });
@@ -339,12 +344,13 @@ export class PrologueScene extends Phaser.Scene {
     const pos = this.player.getPosition();
     let onPlatform = false;
 
-    for (const plat of PROLOGUE_PLATFORMS) {
+    for (const cluster of PROLOGUE_CLUSTERS) {
+      const footprint = cluster.footprint;
       if (
-        pos.x >= plat.x &&
-        pos.x <= plat.x + plat.width &&
-        pos.y >= plat.y - 10 &&
-        pos.y <= plat.y + plat.height + 10
+        pos.x >= footprint.x &&
+        pos.x <= footprint.x + footprint.width &&
+        pos.y >= footprint.y - 10 &&
+        pos.y <= footprint.y + footprint.height + 10
       ) {
         onPlatform = true;
         this.player.updateSafePosition();
@@ -355,11 +361,12 @@ export class PrologueScene extends Phaser.Scene {
     if (!onPlatform) {
       // Check if far enough from any platform to be "falling"
       let nearPlatform = false;
-      for (const plat of PROLOGUE_PLATFORMS) {
-        const cx = plat.x + plat.width / 2;
-        const cy = plat.y + plat.height / 2;
+      for (const cluster of PROLOGUE_CLUSTERS) {
+        const footprint = cluster.footprint;
+        const cx = footprint.x + footprint.width / 2;
+        const cy = footprint.y + footprint.height / 2;
         const dist = Math.sqrt((pos.x - cx) ** 2 + (pos.y - cy) ** 2);
-        if (dist < Math.max(plat.width, plat.height)) {
+        if (dist < Math.max(footprint.width, footprint.height)) {
           nearPlatform = true;
           break;
         }
@@ -493,13 +500,85 @@ export class PrologueScene extends Phaser.Scene {
   shutdown(): void {
     eventBus.off('dialogue:action', this.onDialogueAction, this);
     eventBus.off('progression:gate-open', this.onGateOpen, this);
+    eventBus.off('progression:glitch-spawn', this.onGlitchSpawn, this);
     this.safePositionTimer?.destroy();
     this.moteEmitter?.destroy();
     this.dialogueSystem?.destroy();
     this.interactionSystem?.destroy();
     this.npcBehavior?.destroy();
     this.hud?.destroy();
+    this.platformHandle?.destroy();
+    this.bit?.destroy();
+    this.glitch?.destroy();
     this.player?.destroy();
     for (const npc of this.npcs) npc.destroy();
+  }
+
+  // ─── Watcher System ─────────────────────────────────────────────────────────
+
+  private scheduleWatcherFlyby(delay: number): void {
+    this.time.delayedCall(delay, () => this.spawnWatcherFlyby());
+  }
+
+  private spawnWatcherFlyby(): void {
+    const cam = this.cameras.main;
+    const worldView = cam.worldView;
+
+    // Fly left-to-right across the current camera view
+    const startX = worldView.left - 50;
+    const endX = worldView.right + 50;
+    const y = worldView.top + worldView.height * 0.25;
+
+    // Watcher: a rotating crystalline diamond — geometric, cold, scanning
+    const watcher = this.add.graphics().setDepth(8);
+    const drawWatcher = (): void => {
+      watcher.clear();
+      watcher.fillStyle(0x4c1d95, 0.55);
+      watcher.lineStyle(2, 0xa78bfa, 0.9);
+      // Diamond body
+      watcher.fillTriangle(-14, 0, 0, -18, 14, 0);
+      watcher.fillTriangle(-14, 0, 0, 18, 14, 0);
+      watcher.strokeTriangle(-14, 0, 0, -18, 14, 0);
+      watcher.strokeTriangle(-14, 0, 0, 18, 14, 0);
+      // Scan line
+      watcher.lineStyle(1, 0xc4b5fd, 0.4);
+      watcher.beginPath();
+      watcher.moveTo(0, -18);
+      watcher.lineTo(0, 18);
+      watcher.strokePath();
+    };
+    drawWatcher();
+    watcher.setPosition(startX, y);
+
+    // Slow rotation tween
+    this.tweens.add({
+      targets: watcher,
+      angle: 360,
+      duration: 2400,
+      repeat: -1,
+    });
+
+    // Emit Bit scared event as watcher enters view
+    eventBus.emit(GameEvents.WATCHER_NEARBY, { distance: 150 });
+    gameState.setBitMood(BitMood.SCARED);
+
+    // Fly across
+    this.tweens.add({
+      targets: watcher,
+      x: endX,
+      duration: 5000,
+      ease: 'Linear',
+      onComplete: () => {
+        watcher.destroy();
+        // Bit recovers 1.5s after the watcher leaves
+        this.time.delayedCall(1500, () => {
+          if (gameState.getBitMood() === BitMood.SCARED) {
+            gameState.setBitMood(BitMood.NEUTRAL);
+          }
+        });
+        // Schedule next flyby — 60–120s later
+        this.scheduleWatcherFlyby(Phaser.Math.Between(60000, 120000));
+      },
+    });
   }
 }

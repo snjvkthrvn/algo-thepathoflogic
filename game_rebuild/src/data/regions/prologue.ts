@@ -1,8 +1,137 @@
 /**
- * Prologue region configuration: Chamber of Flow
+ * Prologue region configuration: Chamber of Flow.
  */
 
 import type { RegionConfig } from '../types';
+
+export interface PlatformTile {
+  dx: number;
+  dy: number;
+  frame: number;
+}
+
+export interface PlatformCluster {
+  id: string;
+  label: string;
+  origin: { x: number; y: number };
+  tiles: PlatformTile[];
+  footprint: { x: number; y: number; width: number; height: number };
+}
+
+const GREY_TOP = 6;
+const CYAN_TOP = 9;
+const TILE_W = 64;
+const TILE_H = 36;
+
+const makeRect = (cols: number, rows: number, edgeCyan = true): PlatformTile[] => {
+  const tiles: PlatformTile[] = [];
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const onEdge = edgeCyan && (row === 0 || row === rows - 1 || col === 0 || col === cols - 1);
+
+      tiles.push({
+        dx: (col - (cols - 1) / 2) * TILE_W,
+        dy: (row - (rows - 1) / 2) * TILE_H,
+        frame: onEdge ? CYAN_TOP : GREY_TOP,
+      });
+    }
+  }
+
+  return tiles;
+};
+
+const makeFootprint = (
+  origin: { x: number; y: number },
+  cols: number,
+  rows: number
+): { x: number; y: number; width: number; height: number } => {
+  const width = cols * TILE_W;
+  const height = rows * TILE_H + 40;
+
+  return {
+    x: origin.x - width / 2,
+    y: origin.y - height / 2,
+    width,
+    height,
+  };
+};
+
+const spawnOrigin = { x: 320, y: 400 };
+const spawnBridgeOrigin = { x: 550, y: 400 };
+const hubOrigin = { x: 900, y: 395 };
+const northBridgeOrigin = { x: 900, y: 265 };
+const northOrigin = { x: 900, y: 150 };
+const southBridgeOrigin = { x: 900, y: 525 };
+const southOrigin = { x: 900, y: 640 };
+const eastBridgeOrigin = { x: 1430, y: 400 };
+const courtyardOrigin = { x: 1900, y: 395 };
+
+export const PROLOGUE_CLUSTERS: PlatformCluster[] = [
+  {
+    id: 'spawn',
+    label: 'Awakening',
+    origin: spawnOrigin,
+    tiles: makeRect(3, 2),
+    footprint: makeFootprint(spawnOrigin, 3, 2),
+  },
+  {
+    id: 'bridge_spawn_hub',
+    label: 'Bridge to Hub',
+    origin: spawnBridgeOrigin,
+    tiles: makeRect(5, 1, false),
+    footprint: makeFootprint(spawnBridgeOrigin, 5, 1),
+  },
+  {
+    id: 'hub',
+    label: 'Central Hub',
+    origin: hubOrigin,
+    tiles: makeRect(7, 4),
+    footprint: makeFootprint(hubOrigin, 7, 4),
+  },
+  {
+    id: 'bridge_hub_north',
+    label: 'Bridge North',
+    origin: northBridgeOrigin,
+    tiles: makeRect(1, 3, false),
+    footprint: makeFootprint(northBridgeOrigin, 1, 3),
+  },
+  {
+    id: 'north_branch',
+    label: 'Path of Sequences',
+    origin: northOrigin,
+    tiles: makeRect(3, 3),
+    footprint: makeFootprint(northOrigin, 3, 3),
+  },
+  {
+    id: 'bridge_hub_south',
+    label: 'Bridge South',
+    origin: southBridgeOrigin,
+    tiles: makeRect(1, 3, false),
+    footprint: makeFootprint(southBridgeOrigin, 1, 3),
+  },
+  {
+    id: 'south_branch',
+    label: 'Flow Consoles',
+    origin: southOrigin,
+    tiles: makeRect(3, 3),
+    footprint: makeFootprint(southOrigin, 3, 3),
+  },
+  {
+    id: 'bridge_hub_east',
+    label: 'Bridge East',
+    origin: eastBridgeOrigin,
+    tiles: makeRect(11, 1, false),
+    footprint: makeFootprint(eastBridgeOrigin, 11, 1),
+  },
+  {
+    id: 'gate_courtyard',
+    label: 'Gate Courtyard',
+    origin: courtyardOrigin,
+    tiles: makeRect(5, 3),
+    footprint: makeFootprint(courtyardOrigin, 5, 3),
+  },
+];
 
 export const PROLOGUE_CONFIG: RegionConfig = {
   id: 'prologue',
@@ -14,63 +143,45 @@ export const PROLOGUE_CONFIG: RegionConfig = {
     secondaryColor: '#8b5cf6',
     accentColor: '#fbbf24',
     atmosphere: 'mysterious, contemplative, cosmic',
-    visualStyle: 'floating crystalline platforms over void',
+    visualStyle: 'floating pixel-art platforms over void',
   },
   unlockRequirements: {},
   tilemapKey: 'prologue-map',
   backgroundMusic: 'prologue-bgm',
-  spawnPoint: { x: 400, y: 500 },
+  spawnPoint: spawnOrigin,
   exitPoints: [
     {
       id: 'boss_gate',
-      position: { x: 1100, y: 400 },
+      position: { x: 1830, y: 395 },
       leadsTo: 'boss_sentinel',
       requiresUnlock: true,
       unlockCondition: 'boss_gate_open',
     },
     {
       id: 'array_plains_gateway',
-      position: { x: 1200, y: 400 },
+      position: { x: 2000, y: 395 },
       leadsTo: 'array_plains',
       requiresUnlock: true,
       unlockCondition: 'gateway_open',
     },
   ],
   npcs: [
-    { id: 'professor_node', position: { x: 640, y: 400 }, enabled: true },
-    { id: 'rune_keeper', position: { x: 900, y: 280 }, enabled: true },
-    { id: 'console_keeper', position: { x: 900, y: 520 }, enabled: true },
+    { id: 'professor_node', position: hubOrigin, enabled: true },
+    { id: 'rune_keeper', position: northOrigin, enabled: true },
+    { id: 'console_keeper', position: southOrigin, enabled: true },
   ],
   puzzles: [
-    { id: 'p0_1', position: { x: 950, y: 280 }, enabled: true },
-    { id: 'p0_2', position: { x: 950, y: 520 }, enabled: true },
+    { id: 'p0_1', position: { x: 900, y: 120 }, enabled: true },
+    { id: 'p0_2', position: { x: 900, y: 670 }, enabled: true },
   ],
   interactables: [],
 };
 
-/**
- * Platform layout for the Prologue overworld.
- * Used for procedural generation until Tiled tilemap is available.
- */
-export const PROLOGUE_PLATFORMS = [
-  // Spawn area (left)
-  { x: 300, y: 480, width: 200, height: 120, label: 'spawn' },
-
-  // Central platform (Professor Node)
-  { x: 550, y: 360, width: 260, height: 160, label: 'central' },
-
-  // Bridge from spawn to central
-  { x: 440, y: 450, width: 120, height: 60, label: 'bridge_1' },
-
-  // Upper path (Rune Keeper / P0-1)
-  { x: 730, y: 280, width: 80, height: 60, label: 'upper_bridge' },
-  { x: 850, y: 240, width: 180, height: 120, label: 'upper_platform' },
-
-  // Lower path (Console Keeper / P0-2)
-  { x: 730, y: 460, width: 80, height: 60, label: 'lower_bridge' },
-  { x: 850, y: 490, width: 180, height: 120, label: 'lower_platform' },
-
-  // Boss gate area (right)
-  { x: 1020, y: 360, width: 80, height: 60, label: 'gate_bridge' },
-  { x: 1120, y: 340, width: 160, height: 120, label: 'gate_platform' },
-];
+/** @deprecated Use PROLOGUE_CLUSTERS. Retained while old consumers migrate. */
+export const PROLOGUE_PLATFORMS = PROLOGUE_CLUSTERS.map((cluster) => ({
+  x: cluster.footprint.x,
+  y: cluster.footprint.y,
+  width: cluster.footprint.width,
+  height: cluster.footprint.height,
+  label: cluster.label,
+}));

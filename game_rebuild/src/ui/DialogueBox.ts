@@ -3,14 +3,14 @@
  */
 
 import Phaser from 'phaser';
-import { COLORS, FONTS } from '../config/constants';
-import { adjustBrightness } from '../utils/colors';
+import { FONTS } from '../config/constants';
 import { gameState } from '../core/GameStateManager';
 
 export class DialogueBox {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
-  private background: Phaser.GameObjects.Graphics;
+  private background: Phaser.GameObjects.Image;
+  private portraitFrame: Phaser.GameObjects.Image;
   private speakerText: Phaser.GameObjects.Text;
   private contentText: Phaser.GameObjects.Text;
   private continuePrompt: Phaser.GameObjects.Text;
@@ -34,10 +34,17 @@ export class DialogueBox {
     this.container = scene.add.container(0, 0).setDepth(5000).setScrollFactor(0);
     this.container.setVisible(false);
 
-    // Background
-    this.background = scene.add.graphics();
-    this.drawBackground();
+    this.background = scene.add
+      .image(40 + this.BOX_WIDTH / 2, this.BOX_Y + this.BOX_HEIGHT / 2, 'prologue-ui-dialogue_box')
+      .setOrigin(0.5)
+      .setDisplaySize(this.BOX_WIDTH, this.BOX_HEIGHT);
     this.container.add(this.background);
+
+    this.portraitFrame = scene.add
+      .image(40 + this.BOX_WIDTH - 70, this.BOX_Y + this.BOX_HEIGHT / 2, 'prologue-ui-portrait_active')
+      .setOrigin(0.5)
+      .setDisplaySize(96, 96);
+    this.container.add(this.portraitFrame);
 
     // Speaker name
     this.speakerText = scene.add.text(60, this.BOX_Y + 8, '', {
@@ -54,7 +61,7 @@ export class DialogueBox {
       fontSize: '14px',
       fontFamily: FONTS.MONO,
       color: '#ffffff',
-      wordWrap: { width: this.BOX_WIDTH - this.PADDING * 4 },
+      wordWrap: { width: this.BOX_WIDTH - this.PADDING * 4 - 120 },
       lineSpacing: 6,
     });
     this.container.add(this.contentText);
@@ -77,27 +84,6 @@ export class DialogueBox {
       yoyo: true,
       repeat: -1,
     });
-  }
-
-  private drawBackground(): void {
-    const x = 40;
-    const y = this.BOX_Y;
-
-    // Shadow
-    this.background.fillStyle(0x000000, 0.6);
-    this.background.fillRoundedRect(x + 4, y + 4, this.BOX_WIDTH, this.BOX_HEIGHT, 6);
-
-    // Main bg
-    this.background.fillStyle(COLORS.FRAME_BG, 0.95);
-    this.background.fillRoundedRect(x, y, this.BOX_WIDTH, this.BOX_HEIGHT, 6);
-
-    // Border
-    this.background.lineStyle(3, COLORS.FRAME_BORDER_DARK, 1);
-    this.background.strokeRoundedRect(x, y, this.BOX_WIDTH, this.BOX_HEIGHT, 6);
-
-    // Inner border
-    this.background.lineStyle(1, adjustBrightness(COLORS.FRAME_BORDER_LIGHT, 0.8), 0.5);
-    this.background.strokeRoundedRect(x + 4, y + 4, this.BOX_WIDTH - 8, this.BOX_HEIGHT - 8, 4);
   }
 
   show(speaker: string, text: string, onComplete?: () => void): void {

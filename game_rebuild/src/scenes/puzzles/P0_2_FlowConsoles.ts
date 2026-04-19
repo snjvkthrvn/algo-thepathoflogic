@@ -8,6 +8,7 @@ import { BasePuzzleScene } from './BasePuzzleScene';
 import { SCENE_KEYS, COLORS } from '../../config/constants';
 import { adjustBrightness } from '../../utils/colors';
 import { audioManager } from '../../core/AudioManager';
+import { BitHint } from '../../entities/BitHint';
 
 interface ShardDef {
   shape: 'circle' | 'triangle' | 'square';
@@ -46,6 +47,7 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
   private completedCount: number = 0;
   private hintText: Phaser.GameObjects.Text | null = null;
   private flowLines: Phaser.GameObjects.Graphics[] = [];
+  private bitHint!: BitHint;
 
   constructor() {
     super({ key: SCENE_KEYS.PUZZLE_P0_2 });
@@ -62,6 +64,9 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
     this.createCore(width / 2, height / 2 + 20);
     this.createConsoles(width);
     this.createShards(width, height);
+
+    // Bit starts near the center, watching the layout
+    this.bitHint = new BitHint(this, width / 2, height / 2 - 60);
 
     // Interaction
     this.input.keyboard?.on('keydown-E', () => this.handlePickupPlace());
@@ -255,6 +260,9 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
     shard.container.setScale(1.2);
     shard.container.setAlpha(0.8);
 
+    // Bit moves near the held shard to indicate it's watching
+    this.bitHint.moveTo(shard.container.x, shard.container.y - 50);
+
     // Visual indicator
     this.showMessage('Shard picked up! Click a console to place.', COLORS.CYAN_GLOW);
   }
@@ -294,6 +302,7 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
       shard.placed = true;
       this.heldShard = null;
       this.completedCount++;
+      this.bitHint.showWarm();
 
       // Snap to console
       this.tweens.add({
@@ -327,6 +336,7 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
       // Wrong placement
       this.attempts++;
       audioManager.playWrongTone();
+      this.bitHint.showCold();
 
       // Red flash on console
       const originalAlpha = console.container.alpha;
@@ -410,6 +420,8 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
   }
 
   private puzzleComplete(): void {
+    this.bitHint.celebrate();
+
     let stars = 1;
     if (this.attempts === 0 && this.hintsUsed === 0) {
       stars = 3;

@@ -7,7 +7,7 @@ import { COLORS } from '../config/constants';
 import type { NPCConfig } from '../data/types';
 
 export class NPC {
-  sprite: Phaser.GameObjects.Container;
+  sprite: Phaser.GameObjects.Container | Phaser.GameObjects.Sprite;
   body: Phaser.Physics.Arcade.Body;
   config: NPCConfig;
   private scene: Phaser.Scene;
@@ -20,64 +20,32 @@ export class NPC {
     this.config = config;
     const { x, y } = config.defaultPosition;
 
-    this.sprite = scene.add.container(x, y);
-
-    // Shadow
-    const shadow = scene.add.ellipse(0, 20, 28, 12, 0x000000, 0.3);
-    this.sprite.add(shadow);
-
-    // Body color based on NPC type
-    const bodyColor = this.getNPCColor();
-
-    // Body
-    const body = scene.add.rectangle(0, 4, 22, 26, bodyColor);
-    body.setStrokeStyle(2, 0x333366);
-    this.sprite.add(body);
-
-    // Head
-    const head = scene.add.rectangle(0, -14, 18, 18, bodyColor);
-    head.setStrokeStyle(2, 0x333366);
-    this.sprite.add(head);
-
-    // Eyes
-    const eyeL = scene.add.rectangle(-3, -15, 3, 4, 0xffffff);
-    const eyeR = scene.add.rectangle(3, -15, 3, 4, 0xffffff);
-    this.sprite.add([eyeL, eyeR]);
-
-    // Distinguishing feature based on type
-    if (config.type === 'mentor') {
-      // Hat
-      const hat = scene.add.rectangle(0, -26, 22, 6, COLORS.GOLD_ACCENT);
-      hat.setStrokeStyle(1, 0x996600);
-      this.sprite.add(hat);
-    } else if (config.type === 'guide') {
-      // Cape accent
-      const cape = scene.add.triangle(0, 12, -14, 0, 14, 0, 0, 14, COLORS.PURPLE_CRYSTAL, 0.6);
-      this.sprite.add(cape);
-    }
+    this.sprite = config.spriteKey.startsWith('prologue-')
+      ? this.createSpriteNPC(config)
+      : this.createProceduralNPC(config);
 
     // Glow effect (initially invisible)
     this.glowGraphics = scene.add.graphics();
+    this.glowGraphics.setPosition(x, y);
+    this.glowGraphics.setDepth(3);
     this.glowGraphics.setAlpha(0);
-    this.sprite.addAt(this.glowGraphics, 0);
     this.updateGlow();
 
     // Name tag
-    this.nameTag = scene.add.text(0, -38, config.name, {
+    this.nameTag = scene.add.text(x, y - 46, config.name, {
       fontSize: '10px',
       fontFamily: '"Press Start 2P", monospace',
       color: '#9ca3af',
       stroke: '#000000',
       strokeThickness: 3,
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(6);
     this.nameTag.setVisible(false);
-    this.sprite.add(this.nameTag);
 
     // Physics
     scene.physics.world.enable(this.sprite);
     this.body = this.sprite.body as Phaser.Physics.Arcade.Body;
-    this.body.setSize(22, 26);
-    this.body.setOffset(-11, -4);
+    this.body.setSize(28, 32);
+    this.body.setOffset(-14, -8);
     this.body.setImmovable(true);
 
     // Idle bob animation
@@ -99,6 +67,62 @@ export class NPC {
       case 'boss': return 0xaa4444;
       default: return 0x888888;
     }
+  }
+
+  private createSpriteNPC(config: NPCConfig): Phaser.GameObjects.Sprite {
+    const firstFrame = config.idleFrames?.[0] ?? 0;
+    const sprite = this.scene.add
+      .sprite(config.defaultPosition.x, config.defaultPosition.y, config.spriteKey, firstFrame)
+      .setDepth(4)
+      .setScale(config.spriteKey === 'prologue-node' ? 0.15 : 0.08);
+
+    const animKey = `${config.id}-idle`;
+    if (!this.scene.anims.exists(animKey) && config.idleFrames && config.idleFrames.length > 0) {
+      this.scene.anims.create({
+        key: animKey,
+        frames: config.idleFrames.map((frame) => ({ key: config.spriteKey, frame })),
+        frameRate: 4,
+        repeat: -1,
+      });
+    }
+
+    if (config.idleFrames && config.idleFrames.length > 0) {
+      sprite.anims.play(animKey);
+    }
+
+    return sprite;
+  }
+
+  private createProceduralNPC(config: NPCConfig): Phaser.GameObjects.Container {
+    const { x, y } = config.defaultPosition;
+    const container = this.scene.add.container(x, y);
+
+    const shadow = this.scene.add.ellipse(0, 20, 28, 12, 0x000000, 0.3);
+    container.add(shadow);
+
+    const bodyColor = this.getNPCColor();
+    const body = this.scene.add.rectangle(0, 4, 22, 26, bodyColor);
+    body.setStrokeStyle(2, 0x333366);
+    container.add(body);
+
+    const head = this.scene.add.rectangle(0, -14, 18, 18, bodyColor);
+    head.setStrokeStyle(2, 0x333366);
+    container.add(head);
+
+    const eyeL = this.scene.add.rectangle(-3, -15, 3, 4, 0xffffff);
+    const eyeR = this.scene.add.rectangle(3, -15, 3, 4, 0xffffff);
+    container.add([eyeL, eyeR]);
+
+    if (config.type === 'mentor') {
+      const hat = this.scene.add.rectangle(0, -26, 22, 6, COLORS.GOLD_ACCENT);
+      hat.setStrokeStyle(1, 0x996600);
+      container.add(hat);
+    } else if (config.type === 'guide') {
+      const cape = this.scene.add.triangle(0, 12, -14, 0, 14, 0, 0, 14, COLORS.PURPLE_CRYSTAL, 0.6);
+      container.add(cape);
+    }
+
+    return container;
   }
 
   private updateGlow(): void {
@@ -125,5 +149,7 @@ export class NPC {
 
   destroy(): void {
     this.sprite.destroy();
+    this.glowGraphics.destroy();
+    this.nameTag.destroy();
   }
 }
