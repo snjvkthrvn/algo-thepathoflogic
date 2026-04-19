@@ -1,6 +1,9 @@
 # ALGORITHMIA: THE PATH OF LOGIC — PRODUCTION PLAN
 
 > Master logistics document covering art, engineering, and content production from current state to shippable game.
+>
+> Narrative source of truth: `POKEMON_STYLE_GAME_SCRIPT.md`.
+> Use `FULL_GAME_SCRIPT.md` only as a secondary legacy reference when it provides missing production detail.
 
 ---
 
@@ -128,7 +131,7 @@ The production is divided into **6 phases**. Each phase produces a playable, tes
 ### 1D. Content Polish
 | Task | Effort | Description |
 |------|--------|-------------|
-| Expand dialogue trees | 4h | Match FULL_GAME_SCRIPT.md dialogue for all Prologue NPCs |
+| Expand dialogue trees | 4h | Match `POKEMON_STYLE_GAME_SCRIPT.md` dialogue and FEEL -> NAME beats for all Prologue NPCs |
 | Add Watcher encounter | 8h | Scene 0-3 from script — geometric shape drifts past, Node warns player |
 | Codex entry content | 4h | Write full entries for Sequential Processing and Key-Value Mapping |
 | ConceptBridge content | 4h | Flesh out all 5 sections for P0-1 and P0-2 |
@@ -181,7 +184,7 @@ The production is divided into **6 phases**. Each phase produces a playable, tes
 | Outfit swap system | 4h | Player sprite changes on region entry |
 | Barn Door transition | 4h | Horizontal split open/close for AP puzzles |
 | Region transition (Prologue → AP) | 4h | Golden light reveal, music crossfade |
-| 5 NPC dialogue trees | 8h | Pre/post puzzle dialogue per FULL_GAME_SCRIPT |
+| 5 NPC dialogue trees | 8h | Pre/post puzzle dialogue per `POKEMON_STYLE_GAME_SCRIPT.md` |
 | 4 ConceptBridge contents | 8h | Sorting, Indexing, Hashing, Two Sum |
 | 4 Codex entries | 4h | Full educational content |
 | Progression: AP gate logic | 4h | Boss unlocks after all 4 puzzles |
@@ -238,7 +241,7 @@ The production is divided into **6 phases**. Each phase produces a playable, tes
 | Boss: Mirror Serpent | 16h | Dual-entity fight, 3 phases + unification |
 | Water Ripple transition | 4h | Concentric ripples for TR puzzle transitions |
 | Region transition (AP → TR) | 4h | Vertical split blue/orange |
-| 4 NPC dialogue trees | 8h | Per FULL_GAME_SCRIPT |
+| 4 NPC dialogue trees | 8h | Per `POKEMON_STYLE_GAME_SCRIPT.md` |
 | 4 ConceptBridge contents | 8h | Two pointers, convergence, sliding window, robustness |
 | 4 Codex entries | 4h | |
 
@@ -293,7 +296,7 @@ The production is divided into **6 phases**. Each phase produces a playable, tes
 |------|--------|-------------|
 | 3-5 Looped NPC encounters | 8h | Merchant, guard, scholar — with puzzles to break loops |
 | Memory fragments (6-8) | 6h | Audio/visual recordings scattered across regions |
-| Echo dialogue tree | 4h | Full encounter per FULL_GAME_SCRIPT Scene 3-3 |
+| Echo dialogue tree | 4h | Full encounter per `POKEMON_STYLE_GAME_SCRIPT.md` Scene 3-3 |
 | Pattern dialogue | 4h | Structured data conversation per Scene 3-4 |
 | Watcher encounter in Prologue | 2h | Scene 0-3 atmospheric scare |
 | Merchant collection scene | 4h | First collection witnessed — devastating, clinical |
@@ -338,8 +341,8 @@ The production is divided into **6 phases**. Each phase produces a playable, tes
 |------|--------|-------------|
 | Archive puzzle gauntlet design | 8h | Combined DSA challenges |
 | Core final exam puzzles | 12h | Every concept from the entire game |
-| Architect's message text | 2h | Per FULL_GAME_SCRIPT Scene 3-7 |
-| Three ending narrations | 4h | Per FULL_GAME_SCRIPT endings |
+| Architect's message text | 2h | Per `POKEMON_STYLE_GAME_SCRIPT.md` Scene 3-7 |
+| Three ending narrations | 4h | Per `POKEMON_STYLE_GAME_SCRIPT.md` endings |
 | Archive lore tablets (10+) | 6h | World-building collectibles |
 
 ### Phase 5 Deliverable

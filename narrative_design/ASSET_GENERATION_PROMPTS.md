@@ -2,6 +2,9 @@
 
 > AI prompts for generating all game assets, derived exclusively from `narrative_design` documents.
 > Use with Nano Banana Pro, DALL·E, or similar image generators. Clean up in Aseprite as needed.
+>
+> Canonical narrative source: `POKEMON_STYLE_GAME_SCRIPT.md`.
+> When tone or characterization conflicts with `FULL_GAME_SCRIPT.md`, follow the Pokemon-style script for Bit, Glitch, pacing, and the overall sense of wonder. Keep `FULL_GAME_SCRIPT.md` quotes below only as supplemental visual detail where it is more explicit.
 
 ---
 
@@ -12,6 +15,37 @@
 Maximum 16 colors per sprite. Light source top-left. 1–2px dark outline. 
 Game: Algorithmia – a computing-parallel fantasy world where logic has physical form.
 ```
+
+---
+
+## Prologue Ship Priority
+
+> Generate these in order. Each tier unblocks a visible in-game improvement; skipping ahead leaves later assets without consistent character references.
+
+**Tier 1 — Characters (generate first; they anchor every later scene):**
+1. Player (base form) — `Characters — Prologue › Player`
+2. Bit (SPARK) — `Characters — Prologue › Bit (SPARK)`
+3. Bit mood variants — `Characters — Prologue › Bit Mood States`
+4. Professor Node — `Characters — Prologue › Professor Node`
+5. Glitch (rival character sheet) — `Characters — Prologue › Glitch`
+6. Watcher — `Characters — Prologue › Watcher`
+
+**Tier 2 — Puzzle objects (the three playable puzzles):**
+7. Path Rune tiles (4 states) — P0-1
+8. Flow Consoles (3 color variants) + Crystal Shards (3) + Central Core — P0-2
+9. Fractured Sentinel + Shard Sockets + Pattern Orbs — P0-3 boss
+
+**Tier 3 — Environment:**
+10. Void background + starfield
+11. Floating platform tiles + Awakening platform
+12. Boss Gate (sealed + open) + Threshold Gate + Array Plains Gateway
+
+**Tier 4 — UI & evolution:**
+13. Dialogue box + portraits (Player, Professor Node, Bit, Glitch)
+14. Bit (BYTE stage) — post-boss evolution reveal
+15. Star rating + HINT/EXIT buttons + concept bridge frame
+
+Once Tier 1–4 ship, the prologue is visually complete. Everything below in this document is reference material for later zones and can be generated lazily.
 
 ---
 
@@ -148,7 +182,87 @@ Precise, measured demeanor. Idle + examining pose.
 Between eye and prism. Crystalline, faceted. Rotates slowly.
 No face—geometric observation. Part of "the Pattern"—monitoring system.
 Unsettling but not hostile. Drifts. Scans. Observes.
+Palette: deep violet body (#4c1d95) with light violet outline (#a78bfa).
 Mood: passive observer that flags anomalies for collection.
+```
+
+### Bit (SPARK stage — prologue starter)
+**Source:** POKEMON_STYLE_GAME_SCRIPT lines 108–156 — "Bit starts as a single spark of cyan light — a fleck of pure computation. Pre-verbal, emotive, loyal. Hovers near the player's shoulder. Brightens near the right answer, dims when you're going the wrong way."
+
+**Prompt:**
+```
+[Base template] Companion entity 12×12 (with 24×24 glow halo).
+A single hovering orb of cyan light (#06b6d4) with a brighter white-cyan core (#a5f3fc).
+Soft outer glow 2-3px. No face, no limbs — pure emotive light.
+Idle: gentle vertical bob (2px amplitude, 1.2s cycle).
+Animations needed:
+  - idle_bob (4 frames)
+  - excited_spin (6 frames, orbits the player)
+  - hint_pulse (4 frames, brightens then dims)
+  - scared_shiver (4 frames, rapid horizontal jitter, color shifts cooler)
+Mood: loyal pre-verbal companion. First stage of six (SPARK → BYTE → FRAME → BRANCH → GRAPH → CORE).
+```
+
+### Bit Mood States (5 tint/glow variants on SPARK base)
+**Source:** POKEMON_STYLE_GAME_SCRIPT — Bit communicates entirely through light, color, and motion. Each mood is a palette + glow variant on the base SPARK sprite.
+
+**Prompt:**
+```
+[Base template] Bit SPARK sprite, 5 mood variants. Same 12×12 base, different palette/glow.
+
+1. NEUTRAL — cyan (#06b6d4) core, white-cyan (#a5f3fc) inner highlight. Steady soft glow.
+2. EXCITED — brighter cyan (#22d3ee), yellow-white (#fef3c7) inner highlight. Larger halo, slight sparkle particles (2-3 tiny dots).
+3. SCARED — desaturated blue-gray (#64748b), no inner highlight. Dimmer, smaller halo. Cool palette.
+4. HINT_WARM — amber-gold (#fbbf24) outer, warm white (#fef3c7) inner. Strong pulse. Used when player is NEAR a correct answer.
+5. HINT_COLD — deep blue (#1e40af) outer, dim cyan (#0891b2) inner. Barely glowing. Used when player is FAR from a correct answer.
+
+Preserve silhouette across all 5. Only palette and halo intensity change.
+```
+
+### Bit (BYTE stage — post-prologue-boss evolution)
+**Source:** POKEMON_STYLE_GAME_SCRIPT lines 108–156 — "After defeating the Sentinel and absorbing the Logic Shard, Bit evolves into BYTE — eight particles in a coordinated line, still cyan, still emotive, but now clearly a structured sequence of data."
+
+**Prompt:**
+```
+[Base template] Companion entity, BYTE stage. 32×12 bounding box.
+Eight small cyan (#06b6d4) orbs in a horizontal line, each with white-cyan core (#a5f3fc).
+Each orb is 3×3 px with 1px glow. Spaced 1px apart.
+The line rotates slowly around a central pivot (suggest structured data).
+Animations: idle_rotate (8 frames, orbs drift around center), excited (orbs spread then snap back).
+Evolution reveal: brief white flash, SPARK sprite bursts into 8 particles that arrange into the line.
+Mood: still loyal, now clearly "a sequence" — foreshadows later evolution into FRAME (2D), BRANCH (tree), GRAPH, CORE.
+```
+
+### Glitch (rival character sheet)
+**Source:** POKEMON_STYLE_GAME_SCRIPT lines 160–189 — "Glitch is your Pokemon rival: appears unprompted, never credits you, always claims to have 'already done that,' solves everything by brute force. Cocky smirk, quick posture, takes up more space than he should. Not evil — just insufferable. Evolves across the game from cocky rival to reluctant ally."
+
+**Prompt:**
+```
+[Base template] Rival character sprite sheet, 16×24px base. Pokemon-rival energy.
+Design: humanoid, spiky magenta-red hair (#ef4444), dark jacket with jagged orange accents (#f97316).
+One eye visible, other hidden behind hair. Smirk default expression.
+Posture: leans back, arms often crossed or gesturing dismissively.
+Palette: magenta-red (#ef4444), orange accent (#f97316), dark jacket (#1f2937), cream skin (#fed7aa).
+
+Required pose/state variants (keep character silhouette consistent — same hair, same jacket, same palette):
+  1. intro_taunt — hands on hips, smirk, leaning back ("Ha! You did the tile thing too?")
+  2. brute_force — hunched forward, jabbing at console repeatedly, sweat drops, frustrated face
+  3. admiring_reluctant — arms crossed, looking sideways, small nod ("I MEANT to do that!")
+  4. walking_away — back to camera, casual swagger, one hand waving dismissively
+  5. speaking_portrait — 64×64 bust for dialogue box
+
+Animations: 4-frame walk cycle (all 4 directions), idle smirk, brute-force mash (6 frames).
+Mood: insufferable in a lovable way. Never actually malicious. Always two steps behind but insists he's ahead.
+```
+
+### Glitch Portrait (dialogue box)
+**Prompt:**
+```
+[Base template] 64×64 dialogue portrait of Glitch.
+Head-and-shoulders bust, 3/4 view. Spiky magenta-red hair (#ef4444) dominant.
+One eye visible. Cocky smirk. Dark jacket collar with orange jagged trim.
+Matches character sprite sheet palette exactly. Expression: default smirk.
+Optional variants: frustrated (brow furrowed, mouth tight), impressed-but-hiding-it (one eyebrow up, lip twitch).
 ```
 
 ---
@@ -216,13 +330,22 @@ Display: circle symbol with triple stripes.
 ```
 
 ### Crystal Shards
-**Source:** FULL_GAME_SCRIPT — "Three fragments, each embedded with shape+stripe. Shard A: Triangle+double→Red. Shard B: Diamond+single→Blue. Shard C: Circle+triple→Green."
+**Source:** POKEMON_STYLE_GAME_SCRIPT Scene 0-6 + `flowConsoleCanon.ts` — "Three fragments, each embedded with shape+stripe pairing. Shard A: Triangle+double→Red. Shard B: Diamond+single→Blue. Shard C: Circle+triple→Green."
+
+**Canon colors (must match `game_rebuild/src/prologue/flowConsoleCanon.ts`):**
+- Triangle + double stripes → red (`#ef4444`)
+- Diamond + single stripe → blue (`#3b82f6`)
+- Circle + triple stripes → green (`#22c55e`)
 
 **Prompt:**
 ```
-[Base template] Crystal shard 24×32px. Translucent crystal with embedded symbol.
-Three variants: (1) Triangle + double stripes—cyan tint, (2) Diamond + single stripe—purple tint, (3) Circle + triple stripes—orange/teal. 
-Glowing softly. Matches Flow Console displays.
+[Base template] Crystal shard 24×32px. Translucent faceted crystal with embedded symbol glowing through.
+Three variants (palette MUST match the receiving Flow Console exactly):
+  (1) Triangle + double horizontal stripes — red tint (#ef4444 core, #fca5a5 highlight)
+  (2) Diamond + single horizontal stripe — blue tint (#3b82f6 core, #93c5fd highlight)
+  (3) Circle + triple horizontal stripes — green tint (#22c55e core, #86efac highlight)
+Glowing softly. Shape and stripe count are the gameplay key — must be legible at 24×32.
+Held-by-player variant: same sprite at 16×20 for carry state above player head.
 ```
 
 ### Central Energy Core
@@ -857,13 +980,19 @@ Harmonic resolution, convergence/meeting point
 ### Phase 1 (Prologue)
 - [ ] Void/starfield background
 - [ ] Platform tiles
-- [ ] Player, Professor Node, Rune Keeper, Console Keeper
+- [ ] Player (base form)
+- [ ] Bit — SPARK stage (idle, excited, hint pulse, scared)
+- [ ] Bit — 5 mood variants (NEUTRAL, EXCITED, SCARED, HINT_WARM, HINT_COLD)
+- [ ] Bit — BYTE stage (post-boss evolution reveal)
+- [ ] Professor Node
+- [ ] Glitch (rival sprite sheet + portrait)
+- [ ] Rune Keeper, Console Keeper
 - [ ] Watcher
 - [ ] Path rune tiles (4 states)
 - [ ] Flow consoles (3) + shards (3) + core
 - [ ] Fractured Sentinel
 - [ ] Gates, portal
-- [ ] UI box, portraits
+- [ ] UI box, portraits (Player, Professor Node, Bit, Glitch)
 
 ### Phase 2 (Array Plains)
 - [ ] Grass, path, wheat tiles
