@@ -111,7 +111,7 @@ class AudioManagerClass {
   }
 
   /**
-   * Play a procedural tone as placeholder SFX
+   * Play a procedural tone fallback when no authored SFX asset is available.
    */
   playTone(frequency: number, duration: number = 100, type: OscillatorType = 'sine'): void {
     try {

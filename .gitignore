@@ -35,6 +35,7 @@ nul
 # Local tool state
 .superpowers/
 .remember/
+.codex-run/
 
 # Local package manager caches
 npm-cache/

@@ -179,6 +179,9 @@ export abstract class BasePuzzleScene extends Phaser.Scene {
 
   protected abstract displayHint(hintNumber: number): void;
   protected abstract getConceptName(): string;
+  protected shouldSkipConceptBridge(): boolean {
+    return false;
+  }
 
   protected exitPuzzle(): void {
     const { width, height } = this.cameras.main;
@@ -223,6 +226,11 @@ export abstract class BasePuzzleScene extends Phaser.Scene {
       attempts: this.attempts,
       hintsUsed: this.hintsUsed,
     });
+
+    if (this.shouldSkipConceptBridge()) {
+      this.scene.start(this.returnScene);
+      return;
+    }
 
     // Transition to ConceptBridge after a brief hold
     const { width, height } = this.cameras.main;
