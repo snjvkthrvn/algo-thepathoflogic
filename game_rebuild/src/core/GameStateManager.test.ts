@@ -12,8 +12,8 @@ describe('GameStateManager', () => {
   describe('default state', () => {
     it('should have default player position', () => {
       const state = gameState.getState();
-      expect(state.player.x).toBe(400);
-      expect(state.player.y).toBe(500);
+      expect(state.player.x).toBe(320);
+      expect(state.player.y).toBe(400);
       expect(state.player.region).toBe('prologue');
     });
 
@@ -168,7 +168,7 @@ describe('GameStateManager', () => {
       gameState.resetState();
 
       expect(gameState.getFlag('test')).toBe(false);
-      expect(gameState.getState().player.x).toBe(400);
+      expect(gameState.getState().player.x).toBe(320);
     });
 
     it('should load state from saved data', () => {

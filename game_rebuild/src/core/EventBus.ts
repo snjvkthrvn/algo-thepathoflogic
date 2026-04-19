@@ -98,8 +98,8 @@ export const GameEvents = {
   // Companion & rival events
   BIT_MOOD_CHANGE: 'bit:mood-change',   // payload: { mood: BitMood }
   BIT_EVOLVE: 'bit:evolve',             // payload: { from: BitStage, to: BitStage }
-  BIT_HINT: 'bit:hint',                 // payload: { warm: boolean } - hot/cold signal to player
+  BIT_HINT: 'bit:hint',                 // payload: { warm: boolean } — hot/cold signal to player
   GLITCH_ENCOUNTER: 'glitch:encounter', // payload: { stage: number, x: number, y: number }
   SHARD_COLLECTED: 'shard:collected',   // payload: { shardId: string, totalCollected: number }
-  WATCHER_NEARBY: 'watcher:nearby',     // payload: { distance: number } - triggers Bit scared mood
+  WATCHER_NEARBY: 'watcher:nearby',     // payload: { distance: number } — triggers Bit scared mood
 } as const;

@@ -142,33 +142,6 @@ export const professorNodePostPuzzle: DialogueTree = {
 // ─── Rune Keeper ───────────────────────────────────────────────────────────────
 // Voice: ancient, poetic — "wind through crystal" — sparse, not chatty
 
-export const professorNodeBossReturnDialogue: DialogueTree = {
-  startNodeId: 'boss_return_1',
-  nodes: [
-    {
-      id: 'boss_return_1',
-      speaker: 'Professor Node',
-      text: 'The Sentinel accepted you.',
-      nextNodeId: 'boss_return_2',
-    },
-    {
-      id: 'boss_return_2',
-      speaker: 'Professor Node',
-      text: [
-        'Beyond that gate is Array Plains. Warmer. More tangible. The challenges there build on everything you just learned.',
-        "I won't be coming with you. My place is here. But others will guide you - the Village Elder knows the ways of the Plains.",
-      ],
-      nextNodeId: 'boss_return_3',
-    },
-    {
-      id: 'boss_return_3',
-      speaker: 'Professor Node',
-      text: "Knowledge is not just power in this world. It's protection.",
-      actions: [{ type: 'set_flag', value: 'boss_return_cutscene_done' }],
-    },
-  ],
-};
-
 export const runeKeeperDialogue: DialogueTree = {
   startNodeId: 'rk_intro_1',
   nodes: [

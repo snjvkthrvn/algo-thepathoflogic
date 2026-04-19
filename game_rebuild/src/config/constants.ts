@@ -3,6 +3,8 @@
  */
 
 export const TILE_SIZE = 64;
+export const WORLD_WIDTH = 2400;
+export const WORLD_HEIGHT = 720;
 export const PLAYER_SPEED = 160;
 export const INTERACTION_RANGE = 48;
 export const VOID_RESPAWN_CHECK_INTERVAL = 500;

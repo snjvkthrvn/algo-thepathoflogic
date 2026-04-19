@@ -4,7 +4,7 @@
  * Glitch uses brute force. He shows up when you're doing well, delivers
  * a cutting line, then runs off. Over time his certainty cracks.
  *
- * Visual: static/glitchy - rapidly alternating color rectangles,
+ * Visual: static/glitchy — rapidly alternating color rectangles,
  * occasional position flicker, desaturated palette.
  */
 
@@ -29,13 +29,13 @@ export class GlitchRival {
     this.container = scene.add.container(-200, -200);
     this.container.setDepth(9).setAlpha(0).setVisible(false);
 
-    // Body - darker, more angular than Bit/player
+    // Body — darker, more angular than Bit/player
     this.body = scene.add.rectangle(0, 4, 18, 22, GLITCH_COLORS[0]);
     this.body.setStrokeStyle(2, 0x4c1d95);
     this.head = scene.add.rectangle(0, -11, 14, 14, GLITCH_COLORS[0]);
     this.head.setStrokeStyle(2, 0x4c1d95);
 
-    // Eyes - narrower, asymmetric
+    // Eyes — narrower, asymmetric
     const eyeL = scene.add.rectangle(-3, -12, 4, 2, 0xc4b5fd);
     const eyeR = scene.add.rectangle(4, -12, 2, 2, 0xc4b5fd);
 
@@ -43,7 +43,7 @@ export class GlitchRival {
     this.startGlitchFlicker();
   }
 
-  // Public API
+  // ─── Public API ────────────────────────────────────────────────────────────
 
   /** Spawn Glitch at a position and run the encounter for this stage. */
   triggerEncounter(x: number, y: number): void {
@@ -72,7 +72,7 @@ export class GlitchRival {
     this.container.destroy();
   }
 
-  // Dialogue sequence
+  // ─── Dialogue Sequence ─────────────────────────────────────────────────────
 
   private runDialogueSequence(lines: typeof GLITCH_DIALOGUE[number], stage: number): void {
     let index = 0;
@@ -147,7 +147,7 @@ export class GlitchRival {
     });
   }
 
-  // Visual glitch effect
+  // ─── Visual Glitch Effect ──────────────────────────────────────────────────
 
   private startGlitchFlicker(): void {
     this.glitchTimer = this.scene.time.addEvent({

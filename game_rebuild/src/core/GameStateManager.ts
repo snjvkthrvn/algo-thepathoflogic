@@ -7,6 +7,7 @@ import { eventBus, GameEvents } from './EventBus';
 import type { GameState, PuzzleResult, GameSettings } from '../data/types';
 import { BitStage, BitMood } from '../data/types';
 import { REGIONS } from '../config/constants';
+import { PROLOGUE_CONFIG } from '../data/regions/prologue';
 
 const DEFAULT_SETTINGS: GameSettings = {
   musicVolume: 0.7,
@@ -16,7 +17,11 @@ const DEFAULT_SETTINGS: GameSettings = {
 
 function createDefaultState(): GameState {
   return {
-    player: { x: 400, y: 500, region: REGIONS.PROLOGUE },
+    player: {
+      x: PROLOGUE_CONFIG.spawnPoint.x,
+      y: PROLOGUE_CONFIG.spawnPoint.y,
+      region: REGIONS.PROLOGUE,
+    },
     companion: { stage: BitStage.SPARK, mood: BitMood.NEUTRAL },
     rival: { encountered: false, encounterStage: 0 },
     shardsCollected: [],

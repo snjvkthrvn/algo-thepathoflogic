@@ -43,3 +43,14 @@ game_rebuild/npm-cache/
 
 # Local git worktrees
 .worktrees/
+
+# Playwright MCP session artifacts
+.playwright-mcp/
+
+# Visual audit screenshots (transient, regenerable)
+/audit-*.png
+/prologue-*.png
+
+# Python bytecode (slicer scripts)
+__pycache__/
+*.pyc

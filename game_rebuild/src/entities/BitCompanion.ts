@@ -5,7 +5,7 @@
  * learns new algorithm concepts. Visually reflects current BitStage
  * and reacts emotionally to game events via EventBus.
  *
- * Follows the player with smooth lerp - feels alive, not mechanical.
+ * Follows the player with smooth lerp — feels alive, not mechanical.
  */
 
 import Phaser from 'phaser';
@@ -17,7 +17,7 @@ import { COLORS } from '../config/constants';
 // Offset from player center where Bit hovers
 const FOLLOW_OFFSET_X = 38;
 const FOLLOW_OFFSET_Y = -22;
-const FOLLOW_LERP = 0.07; // 7% per frame - floaty but responsive
+const FOLLOW_LERP = 0.07; // 7% per frame — floaty but responsive
 const ORBIT_RADIUS = 6;
 const ORBIT_SPEED = 0.025; // radians per frame
 
@@ -62,7 +62,7 @@ export class BitCompanion {
     this.registerEvents();
   }
 
-  // Public API
+  // ─── Public API ────────────────────────────────────────────────────────────
 
   update(playerX: number, playerY: number): void {
     this.orbitAngle += ORBIT_SPEED;
@@ -83,7 +83,7 @@ export class BitCompanion {
     this.container.destroy();
   }
 
-  // Particle formations
+  // ─── Particle Formations ───────────────────────────────────────────────────
 
   private buildParticles(): void {
     // Clear existing dots
@@ -115,15 +115,15 @@ export class BitCompanion {
   private getStageOffsets(stage: BitStage): [number, number][] {
     switch (stage) {
       case BitStage.SPARK:
-        // Single point - the very beginning
+        // Single point — the very beginning
         return [[0, 0]];
 
       case BitStage.BYTE:
-        // 8 dots in a row - like array indices [0][1][2]...[7]
+        // 8 dots in a row — like array indices [0][1][2]...[7]
         return [[-14, 0], [-10, 0], [-6, 0], [-2, 0], [2, 0], [6, 0], [10, 0], [14, 0]];
 
       case BitStage.FRAME:
-        // Rectangle outline - pattern recognition, bounded space
+        // Rectangle outline — pattern recognition, bounded space
         return [
           [-8, -8], [0, -8], [8, -8],
           [-8,  0],           [8,  0],
@@ -131,7 +131,7 @@ export class BitCompanion {
         ];
 
       case BitStage.BRANCH:
-        // Tree/branch shape - two pointers diverging and converging
+        // Tree/branch shape — two pointers diverging and converging
         return [
           [0, -10],
           [-6, -4], [6, -4],
@@ -139,7 +139,7 @@ export class BitCompanion {
         ];
 
       case BitStage.GRAPH:
-        // Hexagonal node cluster - graph connections
+        // Hexagonal node cluster — graph connections
         return [
           [0, -12],
           [-10, -6], [10, -6],
@@ -148,7 +148,7 @@ export class BitCompanion {
         ];
 
       case BitStage.CORE:
-        // Star burst - mastery of all patterns
+        // Star burst — mastery of all patterns
         return [
           [0, -14],
           [10, -10], [14, 0], [10, 10],
@@ -160,7 +160,7 @@ export class BitCompanion {
     }
   }
 
-  // Mood reactions
+  // ─── Mood Reactions ────────────────────────────────────────────────────────
 
   private playExcited(): void {
     this.stopReactionTween();
@@ -260,7 +260,7 @@ export class BitCompanion {
     }
   }
 
-  // EventBus wiring
+  // ─── EventBus Wiring ───────────────────────────────────────────────────────
 
   private registerEvents(): void {
     eventBus.on(GameEvents.BIT_MOOD_CHANGE, this.onMoodChange, this);

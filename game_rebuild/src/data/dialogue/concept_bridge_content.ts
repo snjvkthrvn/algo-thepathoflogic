@@ -60,7 +60,7 @@ export const CONCEPT_BRIDGE_DATA: Record<string, ConceptBridgeContent> = {
     puzzleId: 'p0_2',
     sections: {
       storyRecap: [
-        'Each shard told you where it belonged. Triangle with double stripes, diamond with a single stripe, and circle with triple stripes each pointed to one exact console.',
+        'Each shard told you where it belonged. Shape, pattern, and color were enough to point to one exact console.',
         'Bit warmed near the right destination. Nearby, Glitch kept forcing random fits and learned the hard way how slow guessing can be.',
         'You felt the difference between searching blindly and matching by rule.',
       ],
@@ -75,14 +75,14 @@ export const CONCEPT_BRIDGE_DATA: Record<string, ConceptBridgeContent> = {
       },
       pseudocode: {
         code: `consoleMap = {
-    "triangle_double": redConsole,
-    "diamond_single": blueConsole,
-    "circle_triple": greenConsole
+    "circle-solid-red": console_1,
+    "triangle-striped-blue": console_2,
+    "square-dotted-green": console_3
 }
 
 function placeShard(shard):
-    key = shard.shape + "_" + shard.stripes
-    target = consoleMap[key]
+    key = shard.shape + shard.pattern + shard.color
+    target = consoleMap[key]  // Instant lookup!
     place(shard, target)`,
         explanation: 'The map stores each console under a descriptive key. Once the key is known, the destination is a direct lookup instead of a search.',
       },

@@ -4,8 +4,7 @@
 > Use with Nano Banana Pro, DALL·E, or similar image generators. Clean up in Aseprite as needed.
 >
 > Canonical narrative source: `POKEMON_STYLE_GAME_SCRIPT.md`.
-> Archived visual references: `legacy/narrative_design/FULL_GAME_SCRIPT.md`, `legacy/narrative_design/WORLD_DESIGN.md`, and `legacy/narrative_design/CHARACTERS.md`.
-> Archived references can provide texture and production detail, but they are not active canon.
+> When tone or characterization conflicts with `FULL_GAME_SCRIPT.md`, follow the Pokemon-style script for Bit, Glitch, pacing, and the overall sense of wonder. Keep `FULL_GAME_SCRIPT.md` quotes below only as supplemental visual detail where it is more explicit.
 
 ---
 
@@ -175,7 +174,7 @@ Precise, measured demeanor. Idle + examining pose.
 ```
 
 ### Watcher
-**Source:** legacy/narrative_design/FULL_GAME_SCRIPT.md Scene 0-3 + legacy/narrative_design/CHARACTERS.md — "Geometric shape drifts through void. Crystalline. Floating polyhedron—between an eye and a prism. Rotating slowly. Faceted surface catching light. Scans. Observes."
+**Source:** FULL_GAME_SCRIPT Scene 0-3 + CHARACTERS — "Geometric shape drifts through void. Crystalline. Floating polyhedron—between an eye and a prism. Rotating slowly. Faceted surface catching light. Scans. Observes."
 
 **Prompt:**
 ```
@@ -875,7 +874,7 @@ Two states: looped (mechanical, empty eyes), freed (alert, grateful).
 ```
 
 ### The Echo
-**Source:** legacy/narrative_design/FULL_GAME_SCRIPT.md Scene 3-3 + legacy/narrative_design/CHARACTERS.md — "Looks like player. Older—worn, patched, degraded. Parts shimmer with Null—patches where existence undoing. Same cloak, faded, fraying. Voice glitches. Memory leaks visible."
+**Source:** FULL_GAME_SCRIPT Scene 3-3 + CHARACTERS — "Looks like player. Older—worn, patched, degraded. Parts shimmer with Null—patches where existence undoing. Same cloak, faded, fraying. Voice glitches. Memory leaks visible."
 
 **Prompt:**
 ```

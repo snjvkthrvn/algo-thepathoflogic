@@ -3,8 +3,7 @@
 > Master logistics document covering art, engineering, and content production from current state to shippable game.
 >
 > Narrative source of truth: `POKEMON_STYLE_GAME_SCRIPT.md`.
-> Archived reference material lives under `legacy/narrative_design/`.
-> Use archived docs only for supplemental production detail; if any archived detail conflicts with the canonical script, follow the canonical script.
+> Use `FULL_GAME_SCRIPT.md` only as a secondary legacy reference when it provides missing production detail.
 
 ---
 

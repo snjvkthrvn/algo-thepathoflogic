@@ -9,20 +9,11 @@ import { SCENE_KEYS, COLORS } from '../../config/constants';
 import { adjustBrightness } from '../../utils/colors';
 import { audioManager } from '../../core/AudioManager';
 import { BitHint } from '../../entities/BitHint';
-import { P0_2_GLITCH_AMBIENT_LINES } from '../../data/dialogue/glitch_dialogue';
-import {
-  FLOW_CONSOLE_CANON,
-  isCorrectFlowConsoleMatch,
-  type FlowConsoleColor,
-  type FlowConsoleShape,
-  type FlowConsoleStripes,
-} from '../../prologue/flowConsoleCanon';
 
 interface ShardDef {
-  shape: FlowConsoleShape;
-  stripes: FlowConsoleStripes;
+  shape: 'circle' | 'triangle' | 'square';
+  pattern: 'solid' | 'striped' | 'dotted';
   color: number;
-  colorName: FlowConsoleColor;
 }
 
 interface Shard {
@@ -34,19 +25,18 @@ interface Shard {
 }
 
 interface Console {
-  def: (typeof FLOW_CONSOLE_CANON)[number];
+  def: ShardDef;
   container: Phaser.GameObjects.Container;
   x: number;
   y: number;
   filled: boolean;
 }
 
-const SHARD_DEFS: ShardDef[] = FLOW_CONSOLE_CANON.map((entry) => ({
-  shape: entry.shape,
-  stripes: entry.stripes,
-  color: entry.colorValue,
-  colorName: entry.colorName,
-}));
+const SHARD_DEFS: ShardDef[] = [
+  { shape: 'circle', pattern: 'solid', color: 0xef4444 },
+  { shape: 'triangle', pattern: 'striped', color: 0x3b82f6 },
+  { shape: 'square', pattern: 'dotted', color: 0x22c55e },
+];
 
 export class P0_2_FlowConsoles extends BasePuzzleScene {
   private shards: Shard[] = [];
@@ -58,13 +48,12 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
   private hintText: Phaser.GameObjects.Text | null = null;
   private flowLines: Phaser.GameObjects.Graphics[] = [];
   private bitHint!: BitHint;
-  private ambientGlitchText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: SCENE_KEYS.PUZZLE_P0_2 });
     this.puzzleId = 'p0_2';
     this.puzzleName = 'Flow Consoles';
-    this.puzzleDescription = 'Match Triangle+Double, Diamond+Single, and Circle+Triple to the correct consoles.';
+    this.puzzleDescription = 'Match each shard to its console. Shape, pattern, color.';
   }
 
   create(): void {
@@ -75,7 +64,6 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
     this.createCore(width / 2, height / 2 + 20);
     this.createConsoles(width);
     this.createShards(width, height);
-    this.createAmbientGlitch();
 
     // Bit starts near the center, watching the layout
     this.bitHint = new BitHint(this, width / 2, height / 2 - 60);
@@ -109,7 +97,9 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
     const y = 200;
     const spacing = 200;
     const startX = width / 2 - spacing;
-    const consoleDefs = [...FLOW_CONSOLE_CANON];
+
+    // Shuffle console order for variety
+    const consoleDefs = [...SHARD_DEFS];
 
     for (let i = 0; i < consoleDefs.length; i++) {
       const x = startX + i * spacing;
@@ -122,16 +112,10 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
       container.add(base);
 
       // Console label showing what it accepts
-      this.drawShapeIndicator(
-        container,
-        { shape: def.shape, stripes: def.stripes, color: def.colorValue },
-        0,
-        -5,
-        20,
-        0.4,
-      );
+      this.drawShapeIndicator(container, def, 0, -5, 20, 0.4);
 
-      const label = this.add.text(0, 35, `${def.colorName.toUpperCase()} CONSOLE`, {
+      // Label
+      const label = this.add.text(0, 35, 'CONSOLE', {
         fontSize: '7px',
         fontFamily: '"Press Start 2P", monospace',
         color: '#9ca3af',
@@ -147,6 +131,7 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
     const spacing = 180;
     const startX = width / 2 - spacing;
 
+    // Shuffle shard order
     const shardDefs = [...SHARD_DEFS];
     for (let i = shardDefs.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -158,13 +143,16 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
       const def = shardDefs[i];
       const container = this.add.container(x, y);
 
+      // Shard glow
       const glow = this.add.graphics();
       glow.fillStyle(def.color, 0.15);
       glow.fillCircle(0, 0, 35);
       container.add(glow);
 
+      // Draw the shard shape
       this.drawShapeIndicator(container, def, 0, 0, 25, 1);
 
+      // Label
       const label = this.add.text(0, 35, 'SHARD', {
         fontSize: '7px',
         fontFamily: '"Press Start 2P", monospace',
@@ -172,11 +160,13 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
       }).setOrigin(0.5);
       container.add(label);
 
+      // Make interactive
       const hitArea = this.add.rectangle(0, 0, 60, 60, 0x000000, 0);
       hitArea.setInteractive({ useHandCursor: true });
       hitArea.on('pointerdown', () => this.pickupShard(this.shards[i]));
       container.add(hitArea);
 
+      // Floating animation
       this.tweens.add({
         targets: container,
         y: y - 5,
@@ -198,11 +188,11 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
 
   private drawShapeIndicator(
     container: Phaser.GameObjects.Container,
-    def: { shape: FlowConsoleShape; stripes: FlowConsoleStripes; color: number },
+    def: ShardDef,
     x: number,
     y: number,
     size: number,
-    alpha: number,
+    alpha: number
   ): void {
     const graphics = this.add.graphics();
 
@@ -217,86 +207,52 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
       case 'triangle':
         graphics.fillStyle(def.color, alpha);
         graphics.fillTriangle(
-          x,
-          y - size,
-          x - size,
-          y + size * 0.7,
-          x + size,
-          y + size * 0.7,
+          x, y - size,
+          x - size, y + size * 0.7,
+          x + size, y + size * 0.7
         );
         graphics.lineStyle(2, adjustBrightness(def.color, 0.6), alpha);
         graphics.strokeTriangle(
-          x,
-          y - size,
-          x - size,
-          y + size * 0.7,
-          x + size,
-          y + size * 0.7,
+          x, y - size,
+          x - size, y + size * 0.7,
+          x + size, y + size * 0.7
         );
         break;
 
-      case 'diamond':
+      case 'square':
         graphics.fillStyle(def.color, alpha);
-        graphics.fillTriangle(x, y - size, x - size, y, x, y + size);
-        graphics.fillTriangle(x, y - size, x + size, y, x, y + size);
+        graphics.fillRect(x - size, y - size, size * 2, size * 2);
         graphics.lineStyle(2, adjustBrightness(def.color, 0.6), alpha);
-        graphics.beginPath();
-        graphics.moveTo(x, y - size);
-        graphics.lineTo(x + size, y);
-        graphics.lineTo(x, y + size);
-        graphics.lineTo(x - size, y);
-        graphics.closePath();
-        graphics.strokePath();
+        graphics.strokeRect(x - size, y - size, size * 2, size * 2);
         break;
     }
 
-    const stripeOffsets = {
-      single: [0],
-      double: [-6, 6],
-      triple: [-9, 0, 9],
-    } as const;
-
-    graphics.lineStyle(2, 0xffffff, 0.35 * alpha);
-    for (const offset of stripeOffsets[def.stripes]) {
-      graphics.beginPath();
-      graphics.moveTo(x - size * 0.6, y + offset);
-      graphics.lineTo(x + size * 0.6, y + offset);
-      graphics.strokePath();
+    // Pattern overlay
+    if (def.pattern === 'striped') {
+      graphics.lineStyle(1, 0xffffff, 0.3 * alpha);
+      for (let i = -size; i <= size; i += 6) {
+        graphics.beginPath();
+        graphics.moveTo(x + i, y - size);
+        graphics.lineTo(x + i, y + size);
+        graphics.strokePath();
+      }
+    } else if (def.pattern === 'dotted') {
+      graphics.fillStyle(0xffffff, 0.3 * alpha);
+      for (let dx = -size + 5; dx < size; dx += 8) {
+        for (let dy = -size + 5; dy < size; dy += 8) {
+          graphics.fillCircle(x + dx, y + dy, 1.5);
+        }
+      }
     }
 
     container.add(graphics);
-  }
-
-  private createAmbientGlitch(): void {
-    this.add.text(1010, 180, 'GLITCH', {
-      fontSize: '9px',
-      fontFamily: '"Press Start 2P", monospace',
-      color: '#a78bfa',
-    }).setOrigin(0.5);
-
-    this.ambientGlitchText = this.add.text(1010, 230, P0_2_GLITCH_AMBIENT_LINES[0], {
-      fontSize: '8px',
-      fontFamily: 'monospace',
-      color: '#cbd5e1',
-      align: 'center',
-      wordWrap: { width: 200 },
-    }).setOrigin(0.5);
-
-    let lineIndex = 0;
-    this.time.addEvent({
-      delay: 2200,
-      loop: true,
-      callback: () => {
-        lineIndex = (lineIndex + 1) % P0_2_GLITCH_AMBIENT_LINES.length;
-        this.ambientGlitchText.setText(P0_2_GLITCH_AMBIENT_LINES[lineIndex]);
-      },
-    });
   }
 
   private pickupShard(shard: Shard): void {
     if (shard.placed || this.heldShard === shard) return;
 
     if (this.heldShard) {
+      // Drop current shard back
       this.returnShard(this.heldShard);
     }
 
@@ -304,12 +260,16 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
     shard.container.setScale(1.2);
     shard.container.setAlpha(0.8);
 
+    // Bit moves near the held shard to indicate it's watching
     this.bitHint.moveTo(shard.container.x, shard.container.y - 50);
+
+    // Visual indicator
     this.showMessage('Shard picked up! Click a console to place.', COLORS.CYAN_GLOW);
   }
 
   private handlePickupPlace(): void {
     if (this.heldShard) {
+      // Try to place in nearest console
       let nearestConsole: Console | null = null;
       let nearestDist = Infinity;
 
@@ -317,7 +277,7 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
         if (console.filled) continue;
         const dist = Math.sqrt(
           (this.heldShard.container.x - console.x) ** 2 +
-          (this.heldShard.container.y - console.y) ** 2,
+          (this.heldShard.container.y - console.y) ** 2
         );
         if (dist < nearestDist) {
           nearestDist = dist;
@@ -332,14 +292,19 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
   }
 
   private tryPlaceShard(shard: Shard, console: Console): void {
-    const matches = isCorrectFlowConsoleMatch(shard.def, console.def);
+    const matches =
+      shard.def.shape === console.def.shape &&
+      shard.def.pattern === console.def.pattern &&
+      shard.def.color === console.def.color;
 
     if (matches) {
+      // Correct placement!
       shard.placed = true;
       this.heldShard = null;
       this.completedCount++;
       this.bitHint.showWarm();
 
+      // Snap to console
       this.tweens.add({
         targets: shard.container,
         x: console.x,
@@ -352,21 +317,28 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
 
       console.filled = true;
       audioManager.playCorrectTone();
+
+      // Draw flow line to core
       this.drawFlowLine(console.x, console.y);
 
+      // Update core brightness
       this.coreBrightness = this.completedCount / 3;
       this.updateCore(this.cameras.main.width / 2, this.cameras.main.height / 2 + 20);
 
+      // Particle burst
       this.createParticleBurst(console.x, console.y, shard.def.color);
 
+      // Check completion
       if (this.completedCount >= 3) {
         this.time.delayedCall(800, () => this.puzzleComplete());
       }
     } else {
+      // Wrong placement
       this.attempts++;
       audioManager.playWrongTone();
       this.bitHint.showCold();
 
+      // Red flash on console
       const originalAlpha = console.container.alpha;
       this.tweens.add({
         targets: console.container,
@@ -405,6 +377,7 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
     const line = this.add.graphics();
     line.lineStyle(2, COLORS.CYAN_GLOW, 0);
 
+    // Animate the line drawing
     const steps = 30;
     let step = 0;
 
@@ -465,17 +438,19 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
     switch (hintNumber) {
       case 1:
         this.hintText = this.add.text(
-          this.cameras.main.width / 2,
-          this.cameras.main.height - 80,
-          'Hint: Each console shows an exact shape and stripe count. Match both.',
-          { fontSize: '11px', fontFamily: 'monospace', color: '#fbbf24', align: 'center', wordWrap: { width: 500 } },
+          this.cameras.main.width / 2, this.cameras.main.height - 80,
+          'Hint: Each console shows what it needs. Match the shapes.',
+          { fontSize: '11px', fontFamily: 'monospace', color: '#fbbf24', align: 'center', wordWrap: { width: 500 } }
         ).setOrigin(0.5).setDepth(500);
         break;
 
       case 2: {
+        // Highlight one correct pair
         const unplaced = this.shards.find((s) => !s.placed);
         const matchingConsole = this.consoles.find(
-          (c) => !c.filled && unplaced && isCorrectFlowConsoleMatch(unplaced.def, c.def),
+          (c) => !c.filled && unplaced &&
+          c.def.shape === unplaced.def.shape &&
+          c.def.pattern === unplaced.def.pattern
         );
 
         if (unplaced && matchingConsole) {
@@ -489,18 +464,21 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
         }
 
         this.hintText = this.add.text(
-          this.cameras.main.width / 2,
-          this.cameras.main.height - 80,
+          this.cameras.main.width / 2, this.cameras.main.height - 80,
           'Hint: A matching pair is highlighted.',
-          { fontSize: '11px', fontFamily: 'monospace', color: '#fbbf24', align: 'center' },
+          { fontSize: '11px', fontFamily: 'monospace', color: '#fbbf24', align: 'center' }
         ).setOrigin(0.5).setDepth(500);
         break;
       }
 
       case 3: {
+        // Auto-place one shard
         const unplacedShard = this.shards.find((s) => !s.placed);
         const targetConsole = this.consoles.find(
-          (c) => !c.filled && unplacedShard && isCorrectFlowConsoleMatch(unplacedShard.def, c.def),
+          (c) => !c.filled && unplacedShard &&
+          c.def.shape === unplacedShard.def.shape &&
+          c.def.pattern === unplacedShard.def.pattern &&
+          c.def.color === unplacedShard.def.color
         );
 
         if (unplacedShard && targetConsole) {
@@ -509,10 +487,9 @@ export class P0_2_FlowConsoles extends BasePuzzleScene {
         }
 
         this.hintText = this.add.text(
-          this.cameras.main.width / 2,
-          this.cameras.main.height - 80,
+          this.cameras.main.width / 2, this.cameras.main.height - 80,
           'Hint: One shard has been placed for you.',
-          { fontSize: '11px', fontFamily: 'monospace', color: '#fbbf24', align: 'center' },
+          { fontSize: '11px', fontFamily: 'monospace', color: '#fbbf24', align: 'center' }
         ).setOrigin(0.5).setDepth(500);
         break;
       }

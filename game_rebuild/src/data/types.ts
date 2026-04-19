@@ -51,12 +51,12 @@ export enum PlayerState {
 }
 
 export enum BitStage {
-  SPARK = 'spark',       // Single particle - just met you
-  BYTE = 'byte',         // 8 particles in a line - arrays unlocked
-  FRAME = 'frame',       // Rectangle outline - patterns recognized
-  BRANCH = 'branch',     // Branching form - conditionals learned
-  GRAPH = 'graph',       // Connected nodes - graphs understood
-  CORE = 'core',         // Full radiant form - all concepts mastered
+  SPARK = 'spark',       // Single particle — just met you
+  BYTE = 'byte',         // 8 particles in a line — arrays unlocked
+  FRAME = 'frame',       // Rectangle outline — patterns recognized
+  BRANCH = 'branch',     // Branching form — conditionals learned
+  GRAPH = 'graph',       // Connected nodes — graphs understood
+  CORE = 'core',         // Full radiant form — all concepts mastered
 }
 
 export enum BitMood {
@@ -263,6 +263,8 @@ export interface NPCConfig {
   name: string;
   type: NPCType;
   spriteKey: string;
+  idleFrames?: number[];
+  talkFrames?: number[];
   defaultPosition: Position;
   dialogue: DialogueTree;
   postPuzzleDialogue?: DialogueTree;

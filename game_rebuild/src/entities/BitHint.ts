@@ -40,7 +40,7 @@ export class BitHint {
     this.startFloat();
   }
 
-  // Hint states
+  // ─── Hint States ────────────────────────────────────────────────────────────
 
   /** Move Bit to hover near a world position (e.g., a tile during pattern display). */
   moveTo(x: number, y: number, duration: number = 300): void {
@@ -54,7 +54,7 @@ export class BitHint {
     });
   }
 
-  /** Warm signal - player is on the right track. Orange pulse. */
+  /** Warm signal — player is on the right track. Orange pulse. */
   showWarm(): void {
     this.stopCurrentTween();
     this.dot.setFillStyle(WARM_COLOR, 0.95);
@@ -72,7 +72,7 @@ export class BitHint {
     gameState.setBitMood(BitMood.HINT_WARM);
   }
 
-  /** Cold signal - player is moving away from the solution. Blue-grey dim. */
+  /** Cold signal — player is moving away from the solution. Blue-grey dim. */
   showCold(): void {
     this.stopCurrentTween();
     this.dot.setFillStyle(COLD_COLOR, 0.5);
@@ -126,7 +126,7 @@ export class BitHint {
     this.glow.destroy();
   }
 
-  // Internal helpers
+  // ─── Internal ───────────────────────────────────────────────────────────────
 
   private startFloat(): void {
     this.floatTween?.stop();

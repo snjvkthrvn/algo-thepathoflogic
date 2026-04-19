@@ -73,7 +73,7 @@ export const CODEX_ENTRIES: CodexEntry[] = [
         type: 'what_you_felt',
         title: 'What You Felt',
         content: [
-          'Three shards. Three consoles. Triangle with double stripes. Diamond with a single stripe. Circle with triple stripes.',
+          'Three shards. Three consoles. Each shard had a shape and a stripe count. Each console showed exactly what it wanted.',
           'You looked at the shard. You looked at the consoles. You walked straight to the right one.',
           'Meanwhile, someone nearby tried every slot until something fit. It took them much, much longer.',
           'You felt the difference between searching and knowing. That\'s what mapping gives you.',
